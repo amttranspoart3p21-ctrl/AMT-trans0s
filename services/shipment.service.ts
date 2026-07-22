@@ -1,56 +1,54 @@
-import type { Shipment,ShipmentRecord } from "@/types/shipment";
-import { getMonthlyWorkbook } from "@/lib/excel";
+// we import this for types  its integer or string like that bicically (Typescript)
+import type { Shipment, ShipmentRecord } from "@/types/shipment";
+//we import this for get the excel file path 
+import { getMonthlyWorkbook, SHIPMENT_COLUMNS } from "@/lib/excel";
+//this is used for auto generated the unique id for  WEB SITE 'CRUD'OPERATIONS
 import { generateShipmentId } from "@/utils/shipment";
 
 export async function createShipment(
-  year: number,
-  month: string,
-  shipment: Shipment
+
+  // This function needs
+  year: number,         // year → 2026 (means in number)
+  month: string,        // month → July (means in string)
+  shipment: Shipment    // shipment →  its contain the object 
 ) {
+
+  // this means open example 2026/July.xlsx
   const { workbook, workbookPath } = await getMonthlyWorkbook(year, month);
+  
+  // The sheet name is based on the shipment's exact date (DD-MM-YYYY)
+  const sheetName = shipment.date;
 
-  const worksheet = workbook.getWorksheet("Shipments");
-
+  // Check whether a worksheet with that exact date already exists
+  let worksheet = workbook.getWorksheet(sheetName);
 
   if (!worksheet) {
-    throw new Error("Shipments worksheet not found.");
+    // Create a new worksheet using the date as the sheet name
+    worksheet = workbook.addWorksheet(sheetName);
   }
 
-    // const shipmentId = generateShipmentId(worksheet);
-    const shipmentId = await generateShipmentId();
-      
-    const totalAmount =
-  shipment.quantity * shipment.pricePerPiece;
+  // Set the column definitions (this applies headers if it's new, and sets key mappings)
+  worksheet.columns = SHIPMENT_COLUMNS;
 
-//   worksheet.addRow(shipment);
+  const shipmentId = await generateShipmentId();
 
-const shipmentRecord: ShipmentRecord = {
-  shipmentId,
-  ...shipment,
-  totalAmount,
-};
+  const totalAmount =
+    shipment.quantity * shipment.pricePerPiece;
+  const shipmentRecord: ShipmentRecord = {
+    shipmentId,
+    ...shipment,
+    totalAmount,
+  };
 
-// console.log("Before add:", worksheet.rowCount);
+  worksheet.addRow(shipmentRecord);
 
-// worksheet.addRow(shipmentRecord);
+  console.log(`After add to sheet ${sheetName}:`, worksheet.rowCount);
 
-// console.log("After add:", worksheet.rowCount);
+  await workbook.xlsx.writeFile(workbookPath);
 
-// // worksheet.addRow(shipmentRecord);
+  console.log(`Saved rows in sheet ${sheetName}:`, worksheet.rowCount);
 
-//   await workbook.xlsx.writeFile(workbookPath);
-
-//   return shipment;
-
-worksheet.addRow(shipmentRecord);
-
-console.log("After add:", worksheet.rowCount);
-
-await workbook.xlsx.writeFile(workbookPath);
-
-console.log("Saved rows:", worksheet.rowCount);
-
-return shipment;
+  return shipment;
 }
 
 

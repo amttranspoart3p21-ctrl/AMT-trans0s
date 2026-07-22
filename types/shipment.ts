@@ -1,5 +1,4 @@
 export interface Shipment {
-//   shipmentId: string;
   date: string;
   vehicleNumber: string;
 
@@ -16,9 +15,9 @@ export interface Shipment {
   customerInvoiceNumber: string;
 
   paymentCompany: string;
+   paymentReceivingBranch: string;
   pricePerPiece: number;
-//   totalAmount: number;
-
+    deliveryType: "Normal" | "Home";   
   deliveryStatus: string;
   paymentStatus: string;
 }

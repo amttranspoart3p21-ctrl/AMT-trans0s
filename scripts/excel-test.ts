@@ -1,149 +1,3 @@
-// // v1
-// import ExcelJS from "exceljs";
-// import { createStorageFolders,createYearFolder,getMonthlyWorkbook } from "../lib/excel";
-
-// async function main() {
-    
-//     createStorageFolders();
-
-//      await getMonthlyWorkbook(2025, "May");
-
-//     const yearFolder = createYearFolder(2032);
-
-//     console.log(yearFolder);
-    
-//     const workbook = new ExcelJS.Workbook();
-
-//   const worksheet = workbook.addWorksheet("Shipments");
-
-// //   excel sheet schma or like modal DB structure
-
-// worksheet.columns = [
-//   // --- SECTION 1: CORE LOGISTICS & SHIPMENT INFO ---
-//   { header: "Shipment ID", key: "shipmentId", width: 20 },                     // Auto Generated
-//   { header: "Date", key: "date", width: 15 },                                 // Required
-//   { header: "Vehicle Number", key: "vehicleNumber", width: 20 },               // Required
-  
-//   // --- SECTION 2: ROUTING (ORIGIN & DESTINATION) ---
-//   { header: "From AMT Branch", key: "fromAmtBranch", width: 20 },             // Required
-//   { header: "From Company", key: "fromCompany", width: 25 },                   // Required
-//   { header: "To AMT Branch", key: "toAmtBranch", width: 20 },                 // Required
-//   { header: "To Company", key: "toCompany", width: 25 },                       // Required
-  
-//   // --- SECTION 3: CARGO DETAILS ---
-//   { header: "Package Type", key: "packageType", width: 15 },                   // Required
-//   { header: "Quantity", key: "quantity", width: 12 },                         // Required
-//   { header: "Price Per Piece", key: "pricePerPiece", width: 15 },               // Optional (Required for Billing)
-//   { header: "Total Amount", key: "totalAmount", width: 15 },                   // Auto Calculated (Required for Billing)
-  
-//   // --- SECTION 4: INVOICING & BILLING ---
-//   { header: "Our Company Invoice Number", key: "ourInvoiceNumber", width: 25 }, // Required
-//   { header: "Customer Company Invoice Number", key: "customerInvoiceNumber", width: 28 }, // Optional
-//   { header: "Payment Company", key: "paymentCompany", width: 25 },             // Optional (Required for Billing)
- 
-  
-//   // --- SECTION 5: OPERATIONAL STATUSES (AT THE END) ---
-//   { header: "Delivery Status", key: "deliveryStatus", width: 18 },             // Required (Delivered/Not Delivered...)
-//   { header: "Payment Status", key: "paymentStatus", width: 15 }                // Required (Paid/Pending/Free)
-// ];
-
-// // dummy data for testing
-//   worksheet.addRow({
-//   shipmentId: "SHP000001",
-//   date: "18-07-2026",
-//   vehicleNumber: "TN09AB1234",
-
-//   fromAmtBranch: "Ambur",
-//   fromCompany: "ABC Textiles",
-
-//   toAmtBranch: "Chennai",
-//   toCompany: "XYZ Exports",
-
-//   packageType: "Box",
-//   quantity: 10,
-
-//   pricePerPiece: 50,
-//   totalAmount: 500,
-
-//   ourInvoiceNumber: "INV001",
-//   customerInvoiceNumber: "CINV001",
-
-//   paymentCompany: "ABC Textiles",
-//   paymentStatus: "Pending",
-//   deliveryStatus: "Not Delivered",
-// });
- 
-//   await workbook.xlsx.writeFile("Test.xlsx");
-
-//   console.log("✅ Excel file created successfully!");
-// }
-
-// main();
-
-// v2
-
-// import {
-//   createStorageFolders,
-//   createYearFolder,
-//   getMonthlyWorkbook,
-// } from "../lib/excel";
-
-// async function main() {
-//   createStorageFolders();
-
-//   await getMonthlyWorkbook(2025, "june");
-
-//   const yearFolder = createYearFolder(2032);
-
-//   console.log(yearFolder);
-// }
-
-// main();
-
-// v3
-
-// import {
-//   createStorageFolders,
-// //   addShipment,
-// } from "../lib/excel";
-// import { createShipment } from "@/services/shipment.service";
-
-// async function main() {
-//   createStorageFolders();
-
-//   await createShipment(2022, "June", {
-// //   shipmentId: "SHP000001",
-//   date: "50-05-2025",
-//   vehicleNumber: "TN09AB1234",
-
-//   fromAmtBranch: "Ambur",
-//   fromCompany: "ABC Textiles",
-
-//   toAmtBranch: "Chennai",
-//   toCompany: "XYZ Exports",
-
-//   packageType: "Box",
-//   quantity: 1,
-
-//   pricePerPiece: 100,
-// //   totalAmount: 500,
-
-//   ourInvoiceNumber: "INV001",
-//   customerInvoiceNumber: "CINV001",
-
-//   paymentCompany: "ABC Textiles",
-
-//   deliveryStatus: "Pending",
-//   paymentStatus: "Pending",
-// });
-
-// }
-
-
-
-// main();
-
-
 
 // v4
 
@@ -152,83 +6,169 @@ import { createShipment } from "@/services/shipment.service";
 
 async function main() {
   createStorageFolders();
+// ---------------- Row 1 ----------------
+await createShipment(2026, "December", {
+  date: "01-12-2026",
+  vehicleNumber: "TN09AB1234",
 
-  // ---------------- Row 1 ----------------
-  await createShipment(2020, "June", {
-    date: "01-06-2022",
-    vehicleNumber: "TN09AB1234",
+  fromAmtBranch: "Ambur",
+  fromCompany: "ABC Textiles",
 
-    fromAmtBranch: "Ambur",
-    fromCompany: "ABC Textiles",
+  toAmtBranch: "Chennai",
+  toCompany: "XYZ Exports",
 
-    toAmtBranch: "Chennai",
-    toCompany: "XYZ Exports",
+  packageType: "Box",
+  quantity: 2,
 
-    packageType: "Box",
-    quantity: 2,
+  pricePerPiece: 100,
 
-    pricePerPiece: 100,
+  ourInvoiceNumber: "INV001",
+  customerInvoiceNumber: "CINV001",
 
-    ourInvoiceNumber: "INV001",
-    customerInvoiceNumber: "CINV001",
+  paymentCompany: "ABC Textiles",
+  paymentReceivingBranch: "Ambur",
+  deliveryType: "Normal",
 
-    paymentCompany: "ABC Textiles",
+  deliveryStatus: "Pending",
+  paymentStatus: "Pending",
+});
 
-    deliveryStatus: "Pending",
-    paymentStatus: "Pending",
-  });
+// ---------------- Row 2 ----------------
+await createShipment(2023, "March", {
+  date: "02-03-2023",
+  vehicleNumber: "TN09AB5678",
 
-  // ---------------- Row 2 ----------------
-  await createShipment(2020, "June", {
-    date: "02-06-2022",
-    vehicleNumber: "TN09AB5678",
+  fromAmtBranch: "Ambur",
+  fromCompany: "DEF Textiles",
 
-    fromAmtBranch: "Ambur",
-    fromCompany: "DEF Textiles",
+  toAmtBranch: "Vellore",
+  toCompany: "PQR Traders",
 
-    toAmtBranch: "Vellore",
-    toCompany: "PQR Traders",
+  packageType: "Bag",
+  quantity: 5,
 
-    packageType: "Bag",
-    quantity: 5,
+  pricePerPiece: 250,
 
-    pricePerPiece: 250,
+  ourInvoiceNumber: "INV002",
+  customerInvoiceNumber: "CINV002",
 
-    ourInvoiceNumber: "INV002",
-    customerInvoiceNumber: "CINV002",
+  paymentCompany: "DEF Textiles",
+  paymentReceivingBranch: "Ambur",
+  deliveryType: "Home",
 
-    paymentCompany: "DEF Textiles",
+  deliveryStatus: "Pending",
+  paymentStatus: "Pending",
+});
 
-    deliveryStatus: "Pending",
-    paymentStatus: "Pending",
-  });
+// ---------------- Row 3 ----------------
+await createShipment(2018, "June", {
+  date: "03-06-2022",
+  vehicleNumber: "TN09AB9999",
 
-  // ---------------- Row 3 ----------------
-  await createShipment(2020, "June", {
-    date: "03-06-2022",
-    vehicleNumber: "TN09AB9999",
+  fromAmtBranch: "Chennai",
+  fromCompany: "LMN Industries",
 
-    fromAmtBranch: "Chennai",
-    fromCompany: "LMN Industries",
+  toAmtBranch: "Ranipet",
+  toCompany: "RST Exports",
 
-    toAmtBranch: "Ranipet",
-    toCompany: "RST Exports",
+  packageType: "Bundle",
+  quantity: 3,
 
-    packageType: "Bundle",
-    quantity: 3,
+  pricePerPiece: 500,
 
-    pricePerPiece: 500,
+  ourInvoiceNumber: "INV003",
+  customerInvoiceNumber: "CINV003",
 
-    ourInvoiceNumber: "INV003",
-    customerInvoiceNumber: "CINV003",
+  paymentCompany: "LMN Industries",
+  paymentReceivingBranch: "Chennai",
+  deliveryType: "Normal",
 
-    paymentCompany: "LMN Industries",
+  deliveryStatus: "Delivered",
+  paymentStatus: "Paid",
+});
 
-    deliveryStatus: "Delivered",
-    paymentStatus: "Paid",
-  });
+// ---------------- Row 4 ----------------
+await createShipment(2014, "June", {
+  date: "05-06-2022",
+  vehicleNumber: "TN09AB1111",
 
-  console.log("✅ Test Completed");
+  fromAmtBranch: "Vellore",
+  fromCompany: "PQR Traders",
+
+  toAmtBranch: "Ambur",
+  toCompany: "DEF Textiles",
+
+  packageType: "Box",
+  quantity: 10,
+
+  pricePerPiece: 150,
+
+  ourInvoiceNumber: "INV004",
+  customerInvoiceNumber: "CINV004",
+
+  paymentCompany: "PQR Traders",
+  paymentReceivingBranch: "Vellore",
+  deliveryType: "Home",
+
+  deliveryStatus: "Pending",
+  paymentStatus: "Pending",
+});
+
+// ---------------- Extra Row 5 ----------------
+await createShipment(2026, "July", {
+  date: "15-07-2026",
+  vehicleNumber: "TN23CZ4321",
+
+  fromAmtBranch: "Ambur",
+  fromCompany: "Apex Footwear",
+
+  toAmtBranch: "Bengaluru",
+  toCompany: "Global Fashion Hub",
+
+  packageType: "Carton",
+  quantity: 8,
+
+  pricePerPiece: 320,
+
+  ourInvoiceNumber: "INV005",
+  customerInvoiceNumber: "CINV005",
+
+  paymentCompany: "Apex Footwear",
+  paymentReceivingBranch: "Ambur",
+  deliveryType: "Home",
+
+  deliveryStatus: "In Transit",
+  paymentStatus: "Partial",
+});
+
+// ---------------- Extra Row 6 ----------------
+await createShipment(2026, "July", {
+  date: "22-07-2026",
+  vehicleNumber: "TN73XY9876",
+
+  fromAmtBranch: "Chennai",
+  fromCompany: "Metro Tanneries",
+
+  toAmtBranch: "Peranampattu",
+  toCompany: "Royal Leather Co.",
+
+  packageType: "Bale",
+  quantity: 15,
+
+  pricePerPiece: 450,
+
+  ourInvoiceNumber: "INV006",
+  customerInvoiceNumber: "CINV006",
+
+  paymentCompany: "Royal Leather Co.",
+  paymentReceivingBranch: "Peranampattu",
+  deliveryType: "Normal",
+
+  deliveryStatus: "Delivered",
+  paymentStatus: "Paid",
+});
+
+console.log("✅ Test Completed");
 }
 
 main();
