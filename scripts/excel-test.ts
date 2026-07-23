@@ -27,6 +27,7 @@ await createShipment(2026, "December", {
 
   paymentCompany: "ABC Textiles",
   paymentReceivingBranch: "Ambur",
+  pickupType:"Home",
   deliveryType: "Normal",
 
   deliveryStatus: "Pending",
@@ -54,6 +55,7 @@ await createShipment(2023, "March", {
 
   paymentCompany: "DEF Textiles",
   paymentReceivingBranch: "Ambur",
+  pickupType:"Home",
   deliveryType: "Home",
 
   deliveryStatus: "Pending",
@@ -81,6 +83,7 @@ await createShipment(2018, "June", {
 
   paymentCompany: "LMN Industries",
   paymentReceivingBranch: "Chennai",
+  pickupType:"Home",
   deliveryType: "Normal",
 
   deliveryStatus: "Delivered",
@@ -108,6 +111,7 @@ await createShipment(2014, "June", {
 
   paymentCompany: "PQR Traders",
   paymentReceivingBranch: "Vellore",
+  pickupType:"Home",
   deliveryType: "Home",
 
   deliveryStatus: "Pending",
@@ -135,6 +139,7 @@ await createShipment(2026, "July", {
 
   paymentCompany: "Apex Footwear",
   paymentReceivingBranch: "Ambur",
+  pickupType:"Home",
   deliveryType: "Home",
 
   deliveryStatus: "In Transit",
@@ -162,6 +167,7 @@ await createShipment(2026, "July", {
 
   paymentCompany: "Royal Leather Co.",
   paymentReceivingBranch: "Peranampattu",
+  pickupType:"Home",
   deliveryType: "Normal",
 
   deliveryStatus: "Delivered",

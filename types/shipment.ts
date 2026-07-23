@@ -17,7 +17,8 @@ export interface Shipment {
   paymentCompany: string;
    paymentReceivingBranch: string;
   pricePerPiece: number;
-    deliveryType: "Normal" | "Home";   
+  pickupType:"Normal" | "Home" | "Free Home Pickup"; 
+    deliveryType: "Normal" | "Home" | "Free Home Delivery";   
   deliveryStatus: string;
   paymentStatus: string;
 }

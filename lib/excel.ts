@@ -102,6 +102,7 @@ export const SHIPMENT_COLUMNS = [
   { header: "Total Amount", key: "totalAmount", width: 15 },                   // Auto Calculated (Required for Billing)
   
   // --- SECTION 5: OPERATIONAL STATUSES (AT THE END) ---
+  { header: "Pickup Type", key: "pickupType", width: 18 }, 
    { header: "Delivery Type", key: "deliveryType", width: 18 },  
   { header: "Delivery Status", key: "deliveryStatus", width: 18 },             // Required (Delivered/Not Delivered...)
   { header: "Payment Status", key: "paymentStatus", width: 15 }                // Required (Paid/Pending/Free)
