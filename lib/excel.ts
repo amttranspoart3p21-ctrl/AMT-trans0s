@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 // path helps us build file paths safely.
 
+
 // 1 one 
 // if the system dont have the setup of storage folder its creat automatically [starts] 
 
@@ -73,56 +74,6 @@ export function createYearFolder(year: number) {
 
 // creating the year based folder for maintain the monthly based excel file [ends]
 
-// 3 three
-
-// this the header of  model schama of monthely excel file [starts]
-
-export const SHIPMENT_COLUMNS = [
-  // --- SECTION 1: CORE LOGISTICS & SHIPMENT INFO ---
-  { header: "Shipment ID", key: "shipmentId", width: 20 },                     // Auto Generated
-  { header: "Date", key: "date", width: 15 },                                 // Required
-  { header: "Vehicle Number", key: "vehicleNumber", width: 20 },               // Required
-  
-  // --- SECTION 2: ROUTING (ORIGIN & DESTINATION) ---
-  { header: "From AMT Branch", key: "fromAmtBranch", width: 20 },             // Required
-  { header: "From Company", key: "fromCompany", width: 25 },                   // Required
-  { header: "To AMT Branch", key: "toAmtBranch", width: 20 },                 // Required
-  { header: "To Company", key: "toCompany", width: 25 },                       // Required
-  
-  // --- SECTION 3: CARGO DETAILS ---
-  { header: "Package Type", key: "packageType", width: 15 },                   // Required
-  { header: "Quantity", key: "quantity", width: 12 },                         // Required
-  
-  // --- SECTION 4: INVOICING & BILLING ---
-  { header: "Our Company Invoice Number", key: "ourInvoiceNumber", width: 25 }, // Required
-  { header: "Customer Company Invoice Number", key: "customerInvoiceNumber", width: 28 }, // Optional
-  { header: "Payment Company Name", key: "paymentCompany", width: 25 },             // Optional (Required for Billing)
-  { header: "Payment Receiving Branch", key: "paymentReceivingBranch", width: 25 }, 
-  { header: "Price Per Piece", key: "pricePerPiece", width: 15 },               // Optional (Required for Billing)
-  { header: "Total Amount", key: "totalAmount", width: 15 },                   // Auto Calculated (Required for Billing)
-  
-  // --- SECTION 5: OPERATIONAL STATUSES (AT THE END) ---
-  { header: "Pickup Type", key: "pickupType", width: 18 }, 
-   { header: "Delivery Type", key: "deliveryType", width: 18 },  
-  { header: "Delivery Status", key: "deliveryStatus", width: 18 },             // Required (Delivered/Not Delivered...)
-  { header: "Payment Status", key: "paymentStatus", width: 15 }                // Required (Paid/Pending/Free)
-];
-
-// this the header of  model schama of monthely excel file [ends]
-
-// 4 four
-
-// Analogy: geting  a blank excel sheet and drawing the table headers on page one. [starts]
-
-function createShipmentWorksheet(workbook: ExcelJS.Workbook): ExcelJS.Worksheet {
-  const worksheet = workbook.addWorksheet("Shipments");
-
-  worksheet.columns = SHIPMENT_COLUMNS;
-
-  return worksheet;
-}
-
-// Analogy: geting  a blank excel sheet and drawing the table headers on page one. [ends]
 
 // 5 five
 

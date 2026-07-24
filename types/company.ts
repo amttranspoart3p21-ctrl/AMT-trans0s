@@ -1,14 +1,21 @@
 export interface Company {
-  companyId: string;
+  companyId: string;   
 
-  companyName: string;
+  branchId: string;      
+  branchName: string;    // requred
 
-  branchId: string;
+  companyName: string;   // requred
 
-  address?: string;
-  phoneNumber?: string;
+  address: string;       // optional
 
-  status: "Active" | "Inactive";
+  phoneNumber1: string;  // optional
+  phoneNumber2?: string;  // optional
+  phoneNumber3?: string;   // optional
+
+  email?: string;        // optional
+  gstNumber?: string;    // optional
+
+  status: "Active" | "Inactive"; // requred
 
   createdAt: string;
   updatedAt: string;

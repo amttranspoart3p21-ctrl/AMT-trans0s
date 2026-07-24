@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "test:branch": "tsx scripts/test-branch.ts",
+    "test:company": "tsx scripts/test-company.ts",
     "start": "next start",
     "lint": "eslint"
   },
