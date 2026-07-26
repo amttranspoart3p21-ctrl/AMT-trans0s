@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  createCompany,
-  getCompanies,
-} from "@/services/company.service";
+  createPackage,
+  getPackages,
+} from "@/services/package.service";
 
 
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get("limit")) || undefined;
 
     const search = searchParams.get("search") || undefined;
-    const branchId = searchParams.get("branchId") || undefined;
+    const companyId = searchParams.get("companyId") || undefined;
 
     const status =
       (searchParams.get("status") as
@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
         | "Inactive"
         | null) ?? undefined;
 
-    const result = await getCompanies(
+    const result = await getPackages(
       page,
       limit,
       search,
-      branchId,
-      status
+      status,
+      companyId
     );
 
     return NextResponse.json(result);
@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const company = await createCompany(body);
+    const pkg = await createPackage(body);
 
-    return NextResponse.json(company, {
+    return NextResponse.json(pkg, {
       status: 201,
     });
   } catch (error) {

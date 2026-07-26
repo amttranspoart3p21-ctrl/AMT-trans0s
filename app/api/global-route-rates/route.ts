@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  createCompany,
-  getCompanies,
-} from "@/services/company.service";
-
+  createGlobalRouteRate,
+  getGlobalRouteRates,
+} from "@/services/global-route-rate.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +13,9 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get("limit")) || undefined;
 
     const search = searchParams.get("search") || undefined;
-    const branchId = searchParams.get("branchId") || undefined;
+    const fromBranchId = searchParams.get("fromBranchId") || undefined;
+    const toBranchId = searchParams.get("toBranchId") || undefined;
+    const packageId = searchParams.get("packageId") || undefined;
 
     const status =
       (searchParams.get("status") as
@@ -22,11 +23,13 @@ export async function GET(request: NextRequest) {
         | "Inactive"
         | null) ?? undefined;
 
-    const result = await getCompanies(
+    const result = await getGlobalRouteRates(
       page,
       limit,
       search,
-      branchId,
+      fromBranchId,
+      toBranchId,
+      packageId,
       status
     );
 
@@ -48,9 +51,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const company = await createCompany(body);
+    const rate = await createGlobalRouteRate(body);
 
-    return NextResponse.json(company, {
+    return NextResponse.json(rate, {
       status: 201,
     });
   } catch (error) {

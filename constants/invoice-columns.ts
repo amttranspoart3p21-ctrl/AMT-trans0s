@@ -1,4 +1,3 @@
-
 export const SHIPMENT_COLUMNS = [
   // --- SECTION 1: CORE LOGISTICS & SHIPMENT INFO ---
   { header: "Shipment ID", key: "shipmentId", width: 20 },                     // Auto Generated
@@ -20,12 +19,15 @@ export const SHIPMENT_COLUMNS = [
   { header: "Customer Company Invoice Number", key: "customerInvoiceNumber", width: 28 }, // Optional
   { header: "Payment Company Name", key: "paymentCompany", width: 25 },             // Optional (Required for Billing)
   { header: "Payment Receiving Branch", key: "paymentReceivingBranch", width: 25 }, 
+  { header: "Transport Rate", key: "transportRate", width: 15 },
+  { header: "Pickup Charge", key: "pickupCharge", width: 15 },
+  { header: "Delivery Charge", key: "deliveryCharge", width: 15 },
   { header: "Price Per Piece", key: "pricePerPiece", width: 15 },               // Optional (Required for Billing)
   { header: "Total Amount", key: "totalAmount", width: 15 },                   // Auto Calculated (Required for Billing)
   
   // --- SECTION 5: OPERATIONAL STATUSES (AT THE END) ---
-  { header: "Pickup Type", key: "pickupType", width: 18 }, 
-   { header: "Delivery Type", key: "deliveryType", width: 18 },  
+  { header: "Pickup Service", key: "pickupService", width: 18 }, 
+  { header: "Delivery Service", key: "deliveryService", width: 18 },  
   { header: "Delivery Status", key: "deliveryStatus", width: 18 },             // Required (Delivered/Not Delivered...)
   { header: "Payment Status", key: "paymentStatus", width: 15 }                // Required (Paid/Pending/Free)
 ];

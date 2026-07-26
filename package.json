@@ -7,6 +7,9 @@
     "build": "next build",
     "test:branch": "tsx scripts/test-branch.ts",
     "test:company": "tsx scripts/test-company.ts",
+    "test:package": "tsx scripts/test-package.ts",
+    "test:company-route-rate": "tsx scripts/test-company-route-rate.ts",
+    "test:global-route-rate": "tsx scripts/test-global-route-rate.ts",
     "start": "next start",
     "lint": "eslint"
   },

@@ -15,12 +15,19 @@ export interface Shipment {
   customerInvoiceNumber: string;
 
   paymentCompany: string;
-   paymentReceivingBranch: string;
-  pricePerPiece: number;
-  pickupType:"Normal" | "Home" | "Free Home Pickup"; 
-    deliveryType: "Normal" | "Home" | "Free Home Delivery";   
-  deliveryStatus: string;
-  paymentStatus: string;
+  paymentReceivingBranch: "From Company" | "To Company";
+
+  pickupService: "Branch" | "Home" | "Free Home";
+  deliveryService: "Branch" | "Home" | "Free Home";
+
+  transportRate?: number;
+  pickupCharge?: number;
+  deliveryCharge?: number;
+  pricePerPiece?: number;
+  totalAmount?: number;
+
+  deliveryStatus: "Not Delivered" | "Delivered" | "Missing" | "Damaged";
+  paymentStatus: "Pending" | "Paid" | "Free";
 }
 
 export interface ShipmentRecord extends Shipment {

@@ -1,0 +1,213 @@
+{
+  "info": {
+    "name": "AMT Transport API Collection",
+    "description": "API endpoints for Branches, Companies, Packages (including Company-Specific Packages), Global Route Rates, Company Route Rates, and Shipment Pricing Calculation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Branches",
+      "item": [
+        {
+          "name": "Get All Branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "branches"]
+            }
+          }
+        },
+        {
+          "name": "Create Branch",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchName\": \"Chennai\",\n  \"branchCode\": \"MAA\",\n  \"address\": \"Central\",\n  \"phoneNumber1\": \"9000000001\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "branches"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        {
+          "name": "Get All Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"]
+            }
+          }
+        },
+        {
+          "name": "Create Company",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"BR001\",\n  \"branchName\": \"Chennai\",\n  \"companyName\": \"XYZ Company\",\n  \"address\": \"123 Main St\",\n  \"phoneNumber1\": \"9876543210\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "companies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Packages",
+      "item": [
+        {
+          "name": "Get Packages (Filtered by Company)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/packages?companyId=CMP001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "packages"],
+              "query": [{ "key": "companyId", "value": "CMP001" }]
+            }
+          }
+        },
+        {
+          "name": "Create Global Package",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageName\": \"Box 4*4\",\n  \"description\": \"Standard Box 4x4\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/packages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "packages"]
+            }
+          }
+        },
+        {
+          "name": "Create Company-Specific Package",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageName\": \"Machine Parts\",\n  \"companyId\": \"CMP001\",\n  \"companyName\": \"XYZ Company\",\n  \"description\": \"Company specific package for XYZ\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/packages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "packages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Global Route Rates",
+      "item": [
+        {
+          "name": "Get Global Route Rates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/global-route-rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "global-route-rates"]
+            }
+          }
+        },
+        {
+          "name": "Create Global Route Rate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromBranchId\": \"BR001\",\n  \"toBranchId\": \"BR002\",\n  \"packageId\": \"PKG001\",\n  \"rate\": 100,\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/global-route-rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "global-route-rates"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Route Rates",
+      "item": [
+        {
+          "name": "Get Company Route Rates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/company-route-rates?companyId=CMP001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-route-rates"],
+              "query": [{ "key": "companyId", "value": "CMP001" }]
+            }
+          }
+        },
+        {
+          "name": "Create Company Route Rate Override",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"CMP001\",\n  \"fromBranchId\": \"BR001\",\n  \"toBranchId\": \"BR002\",\n  \"packageId\": \"PKG001\",\n  \"transportRate\": 80,\n  \"pickupCharge\": 10,\n  \"deliveryCharge\": 20,\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/company-route-rates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-route-rates"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipment Pricing Calculation",
+      "item": [
+        {
+          "name": "Calculate Shipment Pricing (3-Step Lookup)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentCompany\": \"XYZ Company\",\n  \"fromAmtBranch\": \"Chennai\",\n  \"toAmtBranch\": \"Ambur\",\n  \"packageType\": \"Box 4*4\",\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pricing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pricing"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -75,7 +75,7 @@ async function test() {
   }
 }
 
-test();
+test(); 
 
 
 // to test this run this [ npm run test:company ] in terminal 

@@ -1,7 +1,10 @@
-export interface PackageType {
+export interface Package {
   packageId: string;
 
   packageName: string;
+
+  companyId?: string;
+  companyName?: string;
 
   description?: string;
 

@@ -1,44 +1,59 @@
-// we import this for types  its integer or string like that bicically (Typescript)
 import type { Shipment, ShipmentRecord } from "@/types/shipment";
-//we import this for get the excel file path 
 import { getMonthlyWorkbook } from "@/lib/excel";
-//this is used for auto generated the unique id for  WEB SITE 'CRUD'OPERATIONS
 import { generateShipmentId } from "@/utils/shipment";
 import { SHIPMENT_COLUMNS } from "@/constants/invoice-columns";
+import { calculateShipmentPricing } from "@/services/pricing.service";
 
 export async function createShipment(
-
-  // This function needs
-  year: number,         // year → 2026 (means in number)
-  month: string,        // month → July (means in string)
-  shipment: Shipment    // shipment →  its contain the object 
+  year: number,
+  month: string,
+  shipment: Shipment
 ) {
-
-  // this means open example 2026/July.xlsx
   const { workbook, workbookPath } = await getMonthlyWorkbook(year, month);
-  
-  // The sheet name is based on the shipment's exact date (DD-MM-YYYY)
+
   const sheetName = shipment.date;
 
-  // Check whether a worksheet with that exact date already exists
   let worksheet = workbook.getWorksheet(sheetName);
 
   if (!worksheet) {
-    // Create a new worksheet using the date as the sheet name
     worksheet = workbook.addWorksheet(sheetName);
   }
 
-  // Set the column definitions (this applies headers if it's new, and sets key mappings)
   worksheet.columns = SHIPMENT_COLUMNS;
 
   const shipmentId = await generateShipmentId();
 
-  const totalAmount =
-    shipment.quantity * shipment.pricePerPiece;
+  // If pricing breakdown or pricePerPiece is not explicitly passed, calculate pricing automatically via 3-step pricing service
+  let transportRate = shipment.transportRate;
+  let pickupCharge = shipment.pickupCharge;
+  let deliveryCharge = shipment.deliveryCharge;
+  let pricePerPiece = shipment.pricePerPiece;
+  let totalAmount = shipment.totalAmount;
+
+  if (
+    typeof pricePerPiece !== "number" ||
+    pricePerPiece === 0 ||
+    typeof transportRate !== "number" ||
+    (transportRate === 0 && pickupCharge === 0 && deliveryCharge === 0 && pricePerPiece === 0)
+  ) {
+    const calculatedPricing = await calculateShipmentPricing(shipment);
+    transportRate = calculatedPricing.transportRate;
+    pickupCharge = calculatedPricing.pickupCharge;
+    deliveryCharge = calculatedPricing.deliveryCharge;
+    pricePerPiece = calculatedPricing.pricePerPiece;
+    totalAmount = calculatedPricing.totalAmount;
+  } else {
+    totalAmount = shipment.totalAmount ?? (shipment.quantity || 1) * pricePerPiece;
+  }
+
   const shipmentRecord: ShipmentRecord = {
-    shipmentId,
     ...shipment,
-    totalAmount,
+    shipmentId,
+    transportRate: transportRate ?? 0,
+    pickupCharge: pickupCharge ?? 0,
+    deliveryCharge: deliveryCharge ?? 0,
+    pricePerPiece: pricePerPiece ?? 0,
+    totalAmount: totalAmount ?? 0,
   };
 
   worksheet.addRow(shipmentRecord);
@@ -49,18 +64,5 @@ export async function createShipment(
 
   console.log(`Saved rows in sheet ${sheetName}:`, worksheet.rowCount);
 
-  return shipment;
+  return shipmentRecord;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
