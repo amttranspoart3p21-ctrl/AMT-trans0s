@@ -3,9 +3,10 @@ export interface Company {
 
   branchId: string;      
   branchName: string;    // requred
+  branchCode?: string;   // resolved dynamically
+  displayName?: string;  // resolved dynamically: "CompanyName - BranchCode"
 
   companyName: string;   // requred
-
   address: string;       // optional
 
   phoneNumber1: string;  // optional

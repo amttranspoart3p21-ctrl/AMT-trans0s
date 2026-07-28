@@ -52,6 +52,8 @@ export async function createCompany(
         ...companyDataWithRealBranch,
 
         companyId: generateCompanyId(companies),
+        branchCode: branch.branchCode,
+        displayName: `${companyDataWithRealBranch.companyName} - ${branch.branchCode}`,
 
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -192,6 +194,8 @@ export async function updateCompany(
     companies[companyIndex] = {
         ...companies[companyIndex],
         ...companyDataWithRealBranch,
+        branchCode: branch.branchCode,
+        displayName: `${companyDataWithRealBranch.companyName} - ${branch.branchCode}`,
         updatedAt: new Date().toISOString(),
     };
 

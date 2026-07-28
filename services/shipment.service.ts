@@ -1,6 +1,6 @@
 import type { Shipment, ShipmentRecord } from "@/types/shipment";
 import { getMonthlyWorkbook } from "@/lib/excel";
-import { generateShipmentId } from "@/utils/shipment";
+import { generateShipmentId, resolveCompanyNamesInShipment } from "@/utils/shipment";
 import { SHIPMENT_COLUMNS } from "@/constants/invoice-columns";
 import { calculateShipmentPricing } from "@/services/pricing.service";
 
@@ -11,7 +11,9 @@ export async function createShipment(
 ) {
   const { workbook, workbookPath } = await getMonthlyWorkbook(year, month);
 
-  const sheetName = shipment.date;
+  const resolvedShipment = await resolveCompanyNamesInShipment(shipment);
+
+  const sheetName = resolvedShipment.date;
 
   let worksheet = workbook.getWorksheet(sheetName);
 
@@ -24,36 +26,38 @@ export async function createShipment(
   const shipmentId = await generateShipmentId();
 
   // If pricing breakdown or pricePerPiece is not explicitly passed, calculate pricing automatically via 3-step pricing service
-  let transportRate = shipment.transportRate;
-  let pickupCharge = shipment.pickupCharge;
-  let deliveryCharge = shipment.deliveryCharge;
-  let pricePerPiece = shipment.pricePerPiece;
-  let totalAmount = shipment.totalAmount;
+  let transportRate = resolvedShipment.transportRate;
+  let pickupCharge = resolvedShipment.pickupCharge;
+  let deliveryCharge = resolvedShipment.deliveryCharge;
+  let pricePerPiece = resolvedShipment.pricePerPiece;
+  let totalAmount = resolvedShipment.totalAmount;
 
   if (
-    typeof pricePerPiece !== "number" ||
-    pricePerPiece === 0 ||
-    typeof transportRate !== "number" ||
-    (transportRate === 0 && pickupCharge === 0 && deliveryCharge === 0 && pricePerPiece === 0)
+    pricePerPiece === undefined ||
+    transportRate === undefined
   ) {
-    const calculatedPricing = await calculateShipmentPricing(shipment);
+    const calculatedPricing = await calculateShipmentPricing(resolvedShipment);
     transportRate = calculatedPricing.transportRate;
     pickupCharge = calculatedPricing.pickupCharge;
     deliveryCharge = calculatedPricing.deliveryCharge;
     pricePerPiece = calculatedPricing.pricePerPiece;
     totalAmount = calculatedPricing.totalAmount;
   } else {
-    totalAmount = shipment.totalAmount ?? (shipment.quantity || 1) * pricePerPiece;
+    if (totalAmount === undefined) {
+      totalAmount = (pricePerPiece !== null && pricePerPiece !== undefined)
+        ? pricePerPiece * (resolvedShipment.quantity || 1)
+        : null;
+    }
   }
 
   const shipmentRecord: ShipmentRecord = {
-    ...shipment,
+    ...resolvedShipment,
     shipmentId,
-    transportRate: transportRate ?? 0,
-    pickupCharge: pickupCharge ?? 0,
-    deliveryCharge: deliveryCharge ?? 0,
-    pricePerPiece: pricePerPiece ?? 0,
-    totalAmount: totalAmount ?? 0,
+    transportRate: transportRate !== undefined ? transportRate : null,
+    pickupCharge: pickupCharge !== undefined ? pickupCharge : null,
+    deliveryCharge: deliveryCharge !== undefined ? deliveryCharge : null,
+    pricePerPiece: pricePerPiece !== undefined ? pricePerPiece : null,
+    totalAmount: totalAmount !== undefined ? totalAmount : null,
   };
 
   worksheet.addRow(shipmentRecord);

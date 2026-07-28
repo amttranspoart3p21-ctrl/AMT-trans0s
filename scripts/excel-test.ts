@@ -196,52 +196,32 @@ await createShipment(2005, "December", {
   date: "01-12-2005",
   vehicleNumber: "TN09AB1234",
 
-  fromAmtBranch: "Vellore",
-  fromCompany: "Ambur Exports",
+  fromAmtBranch: "Ranipet",
+  fromCompany: "my Fashion",
 
   toAmtBranch: "Chennai",
-  toCompany: "A2Z Fashion",
+  toCompany: "XYZ Exports",
 
-  packageType: "45kg Bundle",
-  quantity: 4,
+  packageType: "Box",
+  quantity: 2,
 
   // pricePerPiece: 100,
 
   ourInvoiceNumber: "INV001",
   customerInvoiceNumber: "CINV001",
 
-  paymentCompany: "Ambur Exports",
+  paymentCompany: "my Fashion",
   paymentReceivingBranch: "From Company",
-  pickupService: "Home",
-  deliveryService: "Home",
+  pickupService: "Branch",
+  deliveryService: "Branch",
 
   deliveryStatus: "Not Delivered",
-  paymentStatus: "Pending",
+  paymentStatus: "Paid",
 });
-
-
-
-
-
-
-
-
 
 console.log("✅ Test Completed");
 }
 
 main();
-
-
-
-
-
-
-
-
-
-
-
-
 
 // to test this run this [ npx tsx scripts/excel-test.ts ] in terminal 

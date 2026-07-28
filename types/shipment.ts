@@ -20,17 +20,17 @@ export interface Shipment {
   pickupService: "Branch" | "Home" | "Free Home";
   deliveryService: "Branch" | "Home" | "Free Home";
 
-  transportRate?: number;
-  pickupCharge?: number;
-  deliveryCharge?: number;
-  pricePerPiece?: number;
-  totalAmount?: number;
-
+  transportRate?: number | null;
+  pickupCharge?: number | null;
+  deliveryCharge?: number | null;
+  pricePerPiece?: number | null;
+  totalAmount?: number | null;
+  
   deliveryStatus: "Not Delivered" | "Delivered" | "Missing" | "Damaged";
   paymentStatus: "Pending" | "Paid" | "Free";
 }
 
 export interface ShipmentRecord extends Shipment {
   shipmentId: string;
-  totalAmount: number;
+  totalAmount: number | null;
 }

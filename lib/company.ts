@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import fs from "fs/promises";
 import path from "path";
 import type { Company } from "@/types/company";
+import { readBranches } from "@/lib/branch";
 import {
   COMPANY_COLUMNS,
   COMPANY_FILE,
@@ -84,6 +85,8 @@ export async function getCompanyWorksheet(): Promise<ExcelJS.Worksheet> {
 
 export async function readCompanies(): Promise<Company[]> {
   const worksheet = await getCompanyWorksheet();
+  const branches = await readBranches();
+  const branchMap = new Map(branches.map((b) => [b.branchId, b.branchCode]));
 
   const companies: Company[] = [];
 
@@ -91,11 +94,20 @@ export async function readCompanies(): Promise<Company[]> {
     // Skip the header row
     if (rowNumber === 1) return;
 
+    const companyId = row.getCell(1).value?.toString() ?? "";
+    const branchId = row.getCell(2).value?.toString() ?? "";
+    const branchName = row.getCell(3).value?.toString() ?? "";
+    const companyName = row.getCell(4).value?.toString() ?? "";
+    const branchCode = branchMap.get(branchId) || "";
+    const displayName = branchCode ? `${companyName} - ${branchCode}` : companyName;
+
     companies.push({
-      companyId: row.getCell(1).value?.toString() ?? "",
-      branchId: row.getCell(2).value?.toString() ?? "",
-      branchName: row.getCell(3).value?.toString() ?? "",
-      companyName: row.getCell(4).value?.toString() ?? "",
+      companyId,
+      branchId,
+      branchName,
+      companyName,
+      branchCode,
+      displayName,
       address: row.getCell(5).value?.toString() ?? "",
       phoneNumber1: row.getCell(6).value?.toString() ?? "",
       phoneNumber2: row.getCell(7).value?.toString() ?? undefined,
