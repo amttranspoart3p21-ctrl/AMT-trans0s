@@ -192,8 +192,8 @@ import { createShipment } from "@/services/shipment.service";
 async function main() {
   createStorageFolders();
 // ---------------- Row 1 ----------------
-await createShipment(2005, "December", {
-  date: "01-12-2005",
+await createShipment(2004, "December", {
+  date: "03-12-2005",
   vehicleNumber: "TN09AB1234",
 
   fromAmtBranch: "Ranipet",

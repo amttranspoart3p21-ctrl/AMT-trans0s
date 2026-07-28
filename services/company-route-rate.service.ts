@@ -132,15 +132,16 @@ export async function createCompanyRouteRate(
   // Validate Company
   const companies = await readCompanies();
 
-  const company = companies.find(
-    (c) =>
-      c.companyId === rateData.companyId ||
-      c.companyName.trim().toLowerCase() ===
-        rateData.companyId?.trim().toLowerCase() ||
-      (rateData.companyName &&
+  const company =
+    companies.find((c) => c.companyId === rateData.companyId) ||
+    companies.find(
+      (c) =>
         c.companyName.trim().toLowerCase() ===
-          rateData.companyName.trim().toLowerCase())
-  );
+          rateData.companyId?.trim().toLowerCase() ||
+        (rateData.companyName &&
+          c.companyName.trim().toLowerCase() ===
+            rateData.companyName.trim().toLowerCase())
+    );
 
   if (!company) {
     throw new Error("Company does not exist.");
@@ -180,6 +181,10 @@ export async function createCompanyRouteRate(
 
   if (fromBranch.branchId === toBranch.branchId) {
     throw new Error("From Branch and To Branch cannot be the same.");
+  }
+
+  if (company.branchId !== fromBranch.branchId && company.branchId !== toBranch.branchId) {
+    throw new Error("The selected company's home branch must match either the From Branch or the To Branch.");
   }
 
   // Validate Package
@@ -348,6 +353,10 @@ export async function updateCompanyRouteRate(
 
   if (fromBranch.branchId === toBranch.branchId) {
     throw new Error("From Branch and To Branch cannot be the same.");
+  }
+
+  if (company.branchId !== fromBranch.branchId && company.branchId !== toBranch.branchId) {
+    throw new Error("The selected company's home branch must match either the From Branch or the To Branch.");
   }
 
   const packages = await readPackages();
