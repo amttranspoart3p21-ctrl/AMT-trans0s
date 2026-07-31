@@ -120,3 +120,79 @@ export async function resolveCompanyNamesInShipment<T extends Partial<Shipment>>
 
   return resolved;
 }
+
+export function calculateQuantity(qty: string | null | undefined): number {
+  if (qty === null || qty === undefined) {
+    return 1;
+  }
+  const clean = qty.trim();
+  if (clean === "") {
+    return 1;
+  }
+
+  // Validate that the format is number(s) optionally separated by x/X/*/×
+  const pattern = /^\d+(?:\s*[xX*×]\s*\d+)*$/;
+  if (!pattern.test(clean)) {
+    return 1;
+  }
+
+  const parts = clean.split(/[xX*×]/);
+  let product = 1;
+  for (const part of parts) {
+    const valStr = part.trim();
+    // Validate positive integer check
+    if (!/^\d+$/.test(valStr)) {
+      return 1;
+    }
+    const val = parseInt(valStr, 10);
+    if (isNaN(val) || val <= 0) {
+      return 1;
+    }
+    product *= val;
+  }
+
+  return product;
+}
+
+export function parseYearMonthFromDate(dateStr: string): { year: number; month: string } {
+  const clean = (dateStr || "").trim();
+  if (clean === "") {
+    throw new Error("Register Date is missing or empty.");
+  }
+  
+  // Try YYYY-MM-DD
+  let match = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const monthIndex = parseInt(match[2], 10) - 1; // 0-indexed
+    if (monthIndex < 0 || monthIndex > 11) {
+      throw new Error(`Invalid month value in Register Date: ${clean}`);
+    }
+    const dateObj = new Date(year, monthIndex, 1);
+    const month = dateObj.toLocaleString("default", { month: "long" });
+    return { year, month };
+  }
+
+  // Try DD-MM-YYYY
+  match = clean.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (match) {
+    const year = parseInt(match[3], 10);
+    const monthIndex = parseInt(match[2], 10) - 1; // 0-indexed
+    if (monthIndex < 0 || monthIndex > 11) {
+      throw new Error(`Invalid month value in Register Date: ${clean}`);
+    }
+    const dateObj = new Date(year, monthIndex, 1);
+    const month = dateObj.toLocaleString("default", { month: "long" });
+    return { year, month };
+  }
+
+  // Try standard Date parsing
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = parsed.toLocaleString("default", { month: "long" });
+    return { year, month };
+  }
+
+  throw new Error(`Register Date format is invalid: "${clean}". Expected YYYY-MM-DD or DD-MM-YYYY.`);
+}

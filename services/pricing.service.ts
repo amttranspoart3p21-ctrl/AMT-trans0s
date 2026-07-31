@@ -2,7 +2,7 @@ import { readGlobalRouteRates } from "@/lib/global-route-rate";
 import { readCompanyRouteRates } from "@/lib/company-route-rate";
 import { readPackages } from "@/lib/package";
 import type { Shipment } from "@/types/shipment";
-import { resolveCompanyDetails, resolveCompanyNamesInShipment } from "@/utils/shipment";
+import { resolveCompanyDetails, resolveCompanyNamesInShipment, calculateQuantity } from "@/utils/shipment";
 import { readCompanies } from "@/lib/company";
 
 export interface PricingCalculationResult {
@@ -168,8 +168,8 @@ export async function calculateShipmentPricing(
 
   if (transportRate !== null && pickupCharge !== null && deliveryCharge !== null) {
     pricePerPiece = transportRate + pickupCharge + deliveryCharge;
-    const quantity = resolvedShipment.quantity || 1;
-    totalAmount = pricePerPiece * quantity;
+    const quantityNum = calculateQuantity(resolvedShipment.quantity);
+    totalAmount = pricePerPiece * quantityNum;
   }
 
   return {

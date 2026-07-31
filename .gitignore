@@ -42,3 +42,12 @@ storage/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python
+python/venv/
+venv/
+__pycache__/
+*.pyc
+
+# Paddle
+python/venv/

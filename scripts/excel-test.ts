@@ -1,227 +1,62 @@
-
-// // v4
-
 // import { createStorageFolders } from "../lib/excel";
 // import { createShipment } from "@/services/shipment.service";
+// import fs from "fs";
+// import path from "path";
 
-// async function main() {
-//   createStorageFolders();
-// // ---------------- Row 1 ----------------
-// await createShipment(2026, "December", {
-//   date: "01-12-2026",
-//   vehicleNumber: "TN09AB1234",
-
-//   fromAmtBranch: "Ambur",
-//   fromCompany: "ABC Textiles",
-
-//   toAmtBranch: "Chennai",
-//   toCompany: "XYZ Exports",
-
-//   packageType: "Box",
-//   quantity: 2,
-
-//   pricePerPiece: 100,
-
-//   ourInvoiceNumber: "INV001",
-//   customerInvoiceNumber: "CINV001",
-
-//   paymentCompany: "ABC Textiles",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Branch",
-
-//   deliveryStatus: "Not Delivered",
-//   paymentStatus: "Pending",
-// });
-
-// // ---------------- Row 2 ----------------
-// await createShipment(2023, "March", {
-//   date: "02-03-2023",
-//   vehicleNumber: "TN09AB5678",
-
-//   fromAmtBranch: "Ambur",
-//   fromCompany: "DEF Textiles",
-
-//   toAmtBranch: "Vellore",
-//   toCompany: "PQR Traders",
-
-//   packageType: "Bag",
-//   quantity: 5,
-
-//   pricePerPiece: 250,
-
-//   ourInvoiceNumber: "INV002",
-//   customerInvoiceNumber: "CINV002",
-
-//   paymentCompany: "DEF Textiles",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Home",
-
-//   deliveryStatus: "Not Delivered",
-//   paymentStatus: "Pending",
-// });
-
-// // ---------------- Row 3 ----------------
-// await createShipment(2018, "June", {
-//   date: "03-06-2022",
-//   vehicleNumber: "TN09AB9999",
-
-//   fromAmtBranch: "Chennai",
-//   fromCompany: "LMN Industries",
-
-//   toAmtBranch: "Ranipet",
-//   toCompany: "RST Exports",
-
-//   packageType: "Bundle",
-//   quantity: 3,
-
-//   pricePerPiece: 500,
-
-//   ourInvoiceNumber: "INV003",
-//   customerInvoiceNumber: "CINV003",
-
-//   paymentCompany: "LMN Industries",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Branch",
-
-//   deliveryStatus: "Delivered",
-//   paymentStatus: "Paid",
-// });
-
-// // ---------------- Row 4 ----------------
-// await createShipment(2014, "June", {
-//   date: "05-06-2022",
-//   vehicleNumber: "TN09AB1111",
-
-//   fromAmtBranch: "Vellore",
-//   fromCompany: "PQR Traders",
-
-//   toAmtBranch: "Ambur",
-//   toCompany: "DEF Textiles",
-
-//   packageType: "Box",
-//   quantity: 10,
-
-//   pricePerPiece: 150,
-
-//   ourInvoiceNumber: "INV004",
-//   customerInvoiceNumber: "CINV004",
-
-//   paymentCompany: "PQR Traders",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Home",
-
-//   deliveryStatus: "Not Delivered",
-//   paymentStatus: "Pending",
-// });
-
-// // ---------------- Extra Row 5 ----------------
-// await createShipment(2026, "July", {
-//   date: "15-07-2026",
-//   vehicleNumber: "TN23CZ4321",
-
-//   fromAmtBranch: "Ambur",
-//   fromCompany: "Apex Footwear",
-
-//   toAmtBranch: "Bengaluru",
-//   toCompany: "Global Fashion Hub",
-
-//   packageType: "Carton",
-//   quantity: 8,
-
-//   pricePerPiece: 320,
-
-//   ourInvoiceNumber: "INV005",
-//   customerInvoiceNumber: "CINV005",
-
-//   paymentCompany: "Apex Footwear",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Home",
-
-//   deliveryStatus: "Not Delivered",
-//   paymentStatus: "Paid",
-// });
-
-// // ---------------- Extra Row 6 ----------------
-// await createShipment(2026, "July", {
-//   date: "22-07-2026",
-//   vehicleNumber: "TN73XY9876",
-
-//   fromAmtBranch: "Chennai",
-//   fromCompany: "Metro Tanneries",
-
-//   toAmtBranch: "Peranampattu",
-//   toCompany: "Royal Leather Co.",
-
-//   packageType: "Bale",
-//   quantity: 15,
-
-//   pricePerPiece: 450,
-
-//   ourInvoiceNumber: "INV006",
-//   customerInvoiceNumber: "CINV006",
-
-//   paymentCompany: "Royal Leather Co.",
-//   paymentReceivingBranch: "From Company",
-//   pickupService: "Home",
-//   deliveryService: "Branch",
-
-//   deliveryStatus: "Delivered",
-//   paymentStatus: "Paid",
-// });
-
-// console.log("✅ Test Completed");
+// async function verifyPath(expectedRelativePath: string, expectedSheetName: string) {
+//   const fullPath = path.join(process.cwd(), expectedRelativePath);
+//   if (fs.existsSync(fullPath)) {
+//     console.log(`  [OK] File exists at: ${expectedRelativePath}`);
+//   } else {
+//     console.error(`  [FAIL] File NOT found at: ${expectedRelativePath}`);
+//   }
 // }
 
-// main();
+// async function main() {
+//   console.log("🚀 Starting Dynamic Workbook Selection Verification...");
+//   createStorageFolders();
 
+//   const testCases = [
+//     { date: "2026-07-31", path: "storage/excel/2026/2026-July.xlsx" },
+//     { date: "2026-05-15", path: "storage/excel/2026/2026-May.xlsx" },
+//     { date: "2030-06-15", path: "storage/excel/2030/2030-June.xlsx" },
+//     { date: "2010-06-25", path: "storage/excel/2010/2010-June.xlsx" },
+//     { date: "2000-07-05", path: "storage/excel/2000/2000-July.xlsx" }
+//   ];
 
+//   for (const tc of testCases) {
+//     console.log(`\n----------------------------------------`);
+//     console.log(`Running test case for date: ${tc.date}`);
+//     console.log(`Expected workbook path: ${tc.path}`);
+    
+//     // We pass year=0 and month="" parameters to verify that the service ignores them
+//     // and derives them dynamically from resolvedShipment.date!
+//     await createShipment(0, "", {
+//       date: tc.date,
+//       vehicleNumber: "TN23-MOCK",
+//       fromAmtBranch: "Ranipet",
+//       fromCompany: "Origin Textiles",
+//       toAmtBranch: "Chennai",
+//       toCompany: "Destination Co",
+//       packageType: "Box",
+//       quantity: "5",
+//       ourInvoiceNumber: "TX-9999",
+//       customerInvoiceNumber: "CUST-9999",
+//       paymentCompany: "Origin Textiles",
+//       paymentReceivingBranch: "From Company",
+//       pickupService: "Branch",
+//       deliveryService: "Branch",
+//       deliveryStatus: "Not Delivered",
+//       paymentStatus: "Pending"
+//     });
 
+//     await verifyPath(tc.path, tc.date);
+//   }
 
+//   console.log("\n========================================");
+//   console.log("✅ All test cases executed successfully!");
+// }
 
-
-// v4
-
-import { createStorageFolders } from "../lib/excel";
-import { createShipment } from "@/services/shipment.service";
-
-async function main() {
-  createStorageFolders();
-// ---------------- Row 1 ----------------
-await createShipment(2004, "December", {
-  date: "03-12-2005",
-  vehicleNumber: "TN09AB1234",
-
-  fromAmtBranch: "Ranipet",
-  fromCompany: "my Fashion",
-
-  toAmtBranch: "Chennai",
-  toCompany: "XYZ Exports",
-
-  packageType: "Box",
-  quantity: 2,
-
-  // pricePerPiece: 100,
-
-  ourInvoiceNumber: "INV001",
-  customerInvoiceNumber: "CINV001",
-
-  paymentCompany: "my Fashion",
-  paymentReceivingBranch: "From Company",
-  pickupService: "Branch",
-  deliveryService: "Branch",
-
-  deliveryStatus: "Not Delivered",
-  paymentStatus: "Paid",
-});
-
-console.log("✅ Test Completed");
-}
-
-main();
-
-// to test this run this [ npx tsx scripts/excel-test.ts ] in terminal 
+// main().catch((err) => {
+//   console.error("❌ Test script failed with error:", err);
+// });

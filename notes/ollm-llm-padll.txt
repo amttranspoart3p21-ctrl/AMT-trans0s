@@ -1,0 +1,102 @@
+Perfect, rayy. 👍
+
+After you get Python 3.11.9 installed, we'll install the remaining tools in this order.
+
+Step 1 
+
+Python 3.11.9 n
+
+This is the foundation.
+
+Step 2 ✅
+
+Visual C++ Redistributable (Latest x64)
+
+Many Python packages like OpenCV and PaddleOCR depend on Microsoft Visual C++ runtime libraries. Installing this first avoids many common installation errors on Windows.
+
+Step 3 ✅
+
+Git (Already installed on your system)
+
+No action needed.
+
+Step 4 ✅
+
+Python Virtual Environment
+
+Inside your project, we'll create a virtual environment.
+
+Example:
+
+transport-system/
+│
+├── app/
+├── components/
+├── python/
+│   ├── venv/
+│   ├── ocr.py
+│   └── requirements.txt
+└── package.json
+
+We don't install Python into the project, but we create a virtual environment inside the project so all Python dependencies stay isolated.
+
+Step 5 ✅
+
+PaddleOCR
+
+This is the OCR engine that extracts text from handwritten transport sheets.
+
+Step 6 
+
+PaddlePaddle
+
+PaddleOCR depends on the PaddlePaddle deep learning framework.
+
+Step 7 ✅
+
+OpenCV
+
+Used for reading and preprocessing images before OCR.
+
+Step 8 ✅
+
+Ollama
+
+Runs the LLM locally on your machine.
+
+Step 9 ✅
+
+Qwen 2.5 Model
+
+Downloaded through Ollama.
+
+This converts raw OCR output into structured shipment JSON.
+
+Final setup will look like this
+Windows
+│
+├── Python 3.11.9
+├── Visual C++ Redistributable
+├── Git
+├── Node.js
+└── Ollama
+
+Project
+│
+├── app/
+├── components/
+├── services/
+├── python/
+│   ├── venv/
+│   ├── ocr.py
+│   ├── requirements.txt
+│   └── ...
+└── package.json
+My suggestion
+
+Since you're raising an IT ticket, ask them to install these two system-level items together:
+
+✅ Python 3.11.9 (64-bit)
+✅ Microsoft Visual C++ Redistributable (Latest x64)
+
+Once those are installed, we can set up the virtual environment and install the Python libraries ourselves inside your project. That keeps your development environment clean and makes the project easier to maintain.

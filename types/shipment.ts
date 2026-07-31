@@ -9,7 +9,7 @@ export interface Shipment {
   toCompany: string;
 
   packageType: string;
-  quantity: number;
+  quantity: string;
 
   ourInvoiceNumber: string;
   customerInvoiceNumber: string;
