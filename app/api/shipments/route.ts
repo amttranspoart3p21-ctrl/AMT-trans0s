@@ -1,11 +1,101 @@
-import { NextResponse } from "next/server";
-import { createShipmentsBatch } from "@/services/shipment.service";
-import type { Shipment } from "@/types/shipment";
+import { NextRequest, NextResponse } from "next/server";
+import { createShipmentsBatch, getShipments, readImageMappings, writeImageMappings } from "@/services/shipment.service";
+import type { Shipment, ShipmentFilters, ShipmentPagination } from "@/types/shipment";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    // Extract pagination params if provided
+    const pageStr = searchParams.get("page");
+    const limitStr = searchParams.get("limit");
+    const pagination: ShipmentPagination = {};
+    if (pageStr && limitStr) {
+      pagination.page = parseInt(pageStr, 10);
+      pagination.limit = parseInt(limitStr, 10);
+    }
+
+    // Extract filter params
+    const filters: ShipmentFilters = {};
+    const search = searchParams.get("search");
+    const date = searchParams.get("date");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
+    const month = searchParams.get("month");
+    const year = searchParams.get("year");
+    const fromBranch = searchParams.get("fromBranch");
+    const toBranch = searchParams.get("toBranch");
+    const fromCompany = searchParams.get("fromCompany");
+    const toCompany = searchParams.get("toCompany");
+    const company = searchParams.get("company");
+    const deliveryStatus = searchParams.get("deliveryStatus");
+    const paymentStatus = searchParams.get("paymentStatus");
+    const vehicleNumber = searchParams.get("vehicleNumber");
+    const ourInvoiceNumber = searchParams.get("ourInvoiceNumber");
+    const customerInvoiceNumber = searchParams.get("customerInvoiceNumber");
+    const packageType = searchParams.get("packageType");
+    const pickupService = searchParams.get("pickupService");
+    const deliveryService = searchParams.get("deliveryService");
+
+    if (search) filters.search = search;
+    if (date) filters.date = date;
+    if (dateFrom) filters.dateFrom = dateFrom;
+    if (dateTo) filters.dateTo = dateTo;
+    if (month) filters.month = month;
+    if (year) filters.year = year;
+    if (fromBranch) filters.fromBranch = fromBranch;
+    if (toBranch) filters.toBranch = toBranch;
+    if (fromCompany) filters.fromCompany = fromCompany;
+    if (toCompany) filters.toCompany = toCompany;
+    if (company) filters.company = company;
+    if (deliveryStatus) filters.deliveryStatus = deliveryStatus as any;
+    if (paymentStatus) filters.paymentStatus = paymentStatus as any;
+    if (vehicleNumber) filters.vehicleNumber = vehicleNumber;
+    if (ourInvoiceNumber) filters.ourInvoiceNumber = ourInvoiceNumber;
+    if (customerInvoiceNumber) filters.customerInvoiceNumber = customerInvoiceNumber;
+    if (packageType) filters.packageType = packageType;
+    if (pickupService) filters.pickupService = pickupService as any;
+    if (deliveryService) filters.deliveryService = deliveryService as any;
+
+    // Extract sorting params
+    const sortBy = searchParams.get("sortBy");
+    const sortOrder = searchParams.get("sortOrder") as "asc" | "desc" | null;
+    const sort = sortBy ? { sortBy, sortOrder: sortOrder || "asc" } : undefined;
+
+    const { shipments, total } = await getShipments(filters, pagination, sort);
+
+    const responseJson: any = {
+      success: true,
+      message: "Shipments fetched successfully.",
+      data: shipments,
+    };
+
+    if (pagination.page && pagination.limit) {
+      responseJson.pagination = {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      };
+    }
+
+    return NextResponse.json(responseJson);
+  } catch (error: any) {
+    console.error("Error GET /api/shipments:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Something went wrong.",
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { year, month, shipments } = body;
+    const { year, month, shipments, imageFileName, uploadSessionId } = body;
 
     if (!shipments || !Array.isArray(shipments)) {
       return NextResponse.json(
@@ -50,8 +140,8 @@ export async function POST(request: Request) {
         quantity: quantity,
         ourInvoiceNumber: s.ourInvoiceNumber || "",
         customerInvoiceNumber: s.customerInvoice || "",
-        paymentCompany: s.paymentCompany || s.fromCompany || "",
-        paymentReceivingBranch: "From Company",
+        paymentCompany: s.paymentCompany || "",
+        paymentReceivingBranch: s.paymentReceivingBranch || "",
         pickupService: "Branch",
         deliveryService: "Branch",
         deliveryStatus: "Not Delivered",
@@ -67,6 +157,30 @@ export async function POST(request: Request) {
       targetMonth,
       formattedShipments
     );
+
+    // Save image reference metadata mappings
+    if (results.length > 0 && imageFileName) {
+      try {
+        const mappings = readImageMappings();
+        const session = uploadSessionId || `US-${Date.now()}`;
+        const idx = imageFileName.indexOf("-");
+        const originalName = idx !== -1 ? imageFileName.substring(idx + 1) : imageFileName;
+        const path = require("path");
+
+        for (const record of results) {
+          mappings[record.shipmentId] = {
+            uploadSessionId: session,
+            imageId: imageFileName,
+            imagePath: path.join("storage", "images", imageFileName),
+            imageFileName: originalName,
+            uploadedAt: new Date().toISOString()
+          } as any;
+        }
+        writeImageMappings(mappings);
+      } catch (err) {
+        console.error("Error creating image references mappings:", err);
+      }
+    }
 
     return NextResponse.json({
       success: failed.length === 0,

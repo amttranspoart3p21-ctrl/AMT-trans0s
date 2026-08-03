@@ -24,13 +24,22 @@ export async function calculateShipmentPricing(
     | "quantity"
     | "pickupService"
     | "deliveryService"
-  > & { paymentCompany?: string; paymentReceivingBranch?: "From Company" | "To Company" }
+  > & { paymentCompany?: string; paymentReceivingBranch?: "From Company" | "To Company" | "" }
 ): Promise<PricingCalculationResult> {
   const companies = await readCompanies();
   const resolvedShipment = await resolveCompanyNamesInShipment(shipment);
 
   // 1. Resolve paymentCompany
-  const paymentCompanyVal = shipment.paymentCompany || shipment.fromCompany || "";
+  const paymentCompanyVal = shipment.paymentCompany || "";
+  if (!paymentCompanyVal) {
+    return {
+      transportRate: null,
+      pickupCharge: null,
+      deliveryCharge: null,
+      pricePerPiece: null,
+      totalAmount: null,
+    };
+  }
   let paymentBranchVal = "";
   if (shipment.paymentReceivingBranch === "From Company") {
     paymentBranchVal = shipment.fromAmtBranch || "";

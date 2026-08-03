@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import type { Branch } from "@/types/branch";
 
 interface BoundingBox {
   x_min: number;
@@ -19,6 +20,7 @@ interface Shipment {
   paymentStatus: string | null;
   isValid: boolean;
   validationErrors: string[];
+  isManual?: boolean;
 }
 
 // Bounding box interface kept for layout/rendering purposes
@@ -28,6 +30,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   // Upload States
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -63,6 +66,72 @@ export default function Dashboard() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coordinatesRef = useRef(coordinates);
+  useEffect(() => {
+    coordinatesRef.current = coordinates;
+  }, [coordinates]);
+
+  // Fetch active branches from the database
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch("/api/branches?status=Active");
+        if (!res.ok) throw new Error("Failed to fetch branches.");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const activeBranches: Branch[] = json.data;
+          setBranches(activeBranches);
+
+          // Validate current selections against new active branch list
+          setMetadata((prev) => {
+            let updatedFrom = prev.fromAmtBranch;
+            let updatedTo = prev.toAmtBranch;
+            let fromInvalid = false;
+            let toInvalid = false;
+
+            if (prev.fromAmtBranch) {
+              const isActive = activeBranches.some((b) => b.branchName === prev.fromAmtBranch);
+              if (!isActive) {
+                updatedFrom = "";
+                fromInvalid = true;
+              }
+            }
+
+            if (prev.toAmtBranch) {
+              const isActive = activeBranches.some((b) => b.branchName === prev.toAmtBranch);
+              if (!isActive) {
+                updatedTo = "";
+                toInvalid = true;
+              }
+            }
+
+            if (fromInvalid || toInvalid) {
+              const invalidFields = [];
+              if (fromInvalid) invalidFields.push("From Branch");
+              if (toInvalid) invalidFields.push("To Branch");
+              setErrorMsg(
+                `Selected ${invalidFields.join(" and ")} is no longer active or has been deleted. Please select a valid branch.`
+              );
+            }
+
+            return {
+              ...prev,
+              fromAmtBranch: updatedFrom,
+              toAmtBranch: updatedTo,
+            };
+          });
+        }
+      } catch (err: any) {
+        console.error("Error fetching branches:", err);
+      }
+    };
+    fetchBranches();
+  }, []);
+
+  const isBranchSelectionValid =
+    metadata.fromAmtBranch.trim() !== "" &&
+    metadata.toAmtBranch.trim() !== "" &&
+    metadata.fromAmtBranch !== metadata.toAmtBranch;
 
   // Client-side row validation
   const validateRow = (shipment: Shipment): { isValid: boolean; errors: string[] } => {
@@ -142,7 +211,8 @@ export default function Dashboard() {
   };
 
   // Run the single OCR Pipeline
-  const handleRunOCR = async () => {
+  const handleRunOCR = async (filenameParam?: string) => {
+    const targetFilename = filenameParam || activeFilename;
     setLoading(true);
     setSaveResult(null);
     setErrorMsg("");
@@ -168,7 +238,7 @@ export default function Dashboard() {
       const response = await fetch("/api/ocr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: activeFilename }),
+        body: JSON.stringify({ filename: targetFilename }),
       });
       clearInterval(stepInterval);
 
@@ -206,8 +276,34 @@ export default function Dashboard() {
       }
 
       if (extractedShipments.length > 0) {
-        setShipments(extractedShipments);
-        setCoordinates(coordsMap);
+        setShipments((prev) => {
+          const manualRows = prev.filter((s) => s.isManual);
+          const merged = [...manualRows, ...extractedShipments];
+          const newCoords: Record<string, BoundingBox> = {};
+
+          const updated = merged.map((s, idx) => {
+            const newId = String(idx + 1);
+
+            let coord: BoundingBox | undefined = undefined;
+            if (prev.includes(s)) {
+              coord = coordinatesRef.current[s.id];
+            } else {
+              coord = coordsMap[s.id];
+            }
+
+            if (coord) {
+              newCoords[newId] = coord;
+            }
+
+            return {
+              ...s,
+              id: newId,
+            };
+          });
+
+          setCoordinates(newCoords);
+          return updated;
+        });
       } else {
         throw new Error("No shipments returned by the OCR pipeline.");
       }
@@ -289,39 +385,52 @@ export default function Dashboard() {
     setRowToRemove(null);
   };
 
+  const handleAddRow = () => {
+    setShipments((prev) => {
+      const newId = String(prev.length + 1);
+      const newRow: Shipment = {
+        id: newId,
+        fromCompany: "",
+        customerInvoice: "",
+        toCompany: "",
+        packageType: "",
+        quantity: "",
+        paymentStatus: "Pending",
+        isValid: false,
+        validationErrors: [],
+        isManual: true,
+      };
+      const validation = validateRow(newRow);
+      newRow.isValid = validation.isValid;
+      newRow.validationErrors = validation.errors;
+      return [...prev, newRow];
+    });
+  };
+
   // AI helpers completely removed
 
   // Save approved valid rows to Excel
   const handleSaveAll = async () => {
+    if (!isBranchSelectionValid) {
+      alert("Origin and Destination branches cannot be the same. Please select different branches.");
+      return;
+    }
     setSaving(true);
     setSaveResult(null);
 
-    const approvedShipments = shipments
-      .filter((s) => s.isValid)
-      .map((s) => ({
-        ...s,
-        date: metadata.date,
-        ourInvoiceNumber: metadata.ourInvoiceNumber,
-        vehicleNumber: metadata.vehicleNumber,
-        fromAmtBranch: metadata.fromAmtBranch,
-        toAmtBranch: metadata.toAmtBranch,
-      }));
-    const invalidCount = shipments.length - shipments.filter((s) => s.isValid).length;
+    const shipmentsToSave = shipments.map((s) => ({
+      ...s,
+      date: metadata.date,
+      ourInvoiceNumber: metadata.ourInvoiceNumber,
+      vehicleNumber: metadata.vehicleNumber,
+      fromAmtBranch: metadata.fromAmtBranch,
+      toAmtBranch: metadata.toAmtBranch,
+    }));
 
-    if (approvedShipments.length === 0) {
-      alert("No valid shipments found to save. Please correct validation errors first.");
+    if (shipmentsToSave.length === 0) {
+      alert("No shipments found to save.");
       setSaving(false);
       return;
-    }
-
-    if (invalidCount > 0) {
-      const confirmSave = confirm(
-        `There are ${invalidCount} invalid rows. These will NOT be written. Only the ${approvedShipments.length} valid rows will be saved to Excel. Proceed?`
-      );
-      if (!confirmSave) {
-        setSaving(false);
-        return;
-      }
     }
 
     try {
@@ -331,7 +440,11 @@ export default function Dashboard() {
         body: JSON.stringify({
           year: new Date().getFullYear(),
           month: new Date().toLocaleString("default", { month: "long" }),
-          shipments: approvedShipments,
+          shipments: shipmentsToSave,
+          imageFileName: activeFilename !== "sample.jpg" ? activeFilename : undefined,
+          uploadSessionId: activeFilename !== "sample.jpg"
+            ? `US-${activeFilename.split("-")[0]}`
+            : `US-MANUAL-${Date.now()}`,
         }),
       });
 
@@ -446,7 +559,8 @@ export default function Dashboard() {
 
   const renderPaymentStatusCell = (s: Shipment) => {
     const val = s.paymentStatus || "Pending";
-    const isPaid = val.toLowerCase().includes("paid");
+    const isPaid = val === "Paid";
+    const isFree = val === "Free";
 
     return (
       <td className="py-2.5 px-2 align-top">
@@ -457,11 +571,14 @@ export default function Dashboard() {
             className={`w-full bg-slate-950/80 border rounded-lg px-2.5 py-1.5 text-xs outline-none focus:ring-1 transition-all font-semibold cursor-pointer ${
               isPaid
                 ? "border-emerald-800/80 text-emerald-400 bg-emerald-950/40 focus:border-emerald-500 focus:ring-emerald-500"
+                : isFree
+                ? "border-sky-800/80 text-sky-400 bg-sky-950/40 focus:border-sky-500 focus:ring-sky-500"
                 : "border-amber-800/80 text-amber-400 bg-amber-950/40 focus:border-amber-500 focus:ring-amber-500"
             }`}
           >
             <option value="Paid" className="bg-slate-950 text-emerald-400">🟢 Paid</option>
             <option value="Pending" className="bg-slate-950 text-amber-400">🟡 Pending</option>
+            <option value="Free" className="bg-slate-950 text-sky-400">🔵 Free</option>
           </select>
         </div>
       </td>
@@ -471,7 +588,7 @@ export default function Dashboard() {
   // ========================================================
   // RENDER WORKSPACE: SPLIT SCREEN REVIEW WORKSPACE
   // ========================================================
-  if (shipments.length > 0) {
+  if (uploadFile !== null) {
     return (
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#070b13]">
         {/* Workspace Header Toolbar */}
@@ -493,6 +610,15 @@ export default function Dashboard() {
                 <span className="text-[10px] font-mono font-normal text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 max-w-[150px] truncate">
                   {activeFilename}
                 </span>
+                {loading && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] text-violet-400 bg-violet-500/10 border border-violet-500/25 px-2 py-0.5 rounded-full animate-pulse font-normal">
+                    <svg className="animate-spin h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>{loadingStep || "Processing OCR..."}</span>
+                  </span>
+                )}
               </h1>
             </div>
           </div>
@@ -513,8 +639,30 @@ export default function Dashboard() {
           {/* Actions */}
           <div className="flex items-center gap-2.5">
             <button
+              onClick={() => handleRunOCR()}
+              disabled={loading || saving || !isBranchSelectionValid}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/50 text-slate-355 hover:text-white text-xs font-semibold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
+                  </svg>
+                  <span>Run OCR</span>
+                </>
+              )}
+            </button>
+            <button
               onClick={handleSaveAll}
-              disabled={saving}
+              disabled={saving || !isBranchSelectionValid}
               className="px-4.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
             >
               {saving ? (
@@ -536,6 +684,111 @@ export default function Dashboard() {
             </button>
           </div>
         </header>
+
+        {/* Secondary Header: Shipment Metadata Form */}
+        <section className="bg-slate-900/40 border-b border-slate-800/80 px-6 py-2.5 backdrop-blur-md flex flex-wrap gap-4 items-center select-none">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shipment Info</div>
+          
+          {/* Date */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">Date</span>
+            <input 
+              type="date"
+              value={metadata.date}
+              onChange={(e) => setMetadata({ ...metadata, date: e.target.value })}
+              className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
+            />
+          </div>
+
+          {/* Invoice Number */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">Invoice No</span>
+            <input 
+              type="text"
+              placeholder="e.g. TX-49502"
+              value={metadata.ourInvoiceNumber}
+              onChange={(e) => setMetadata({ ...metadata, ourInvoiceNumber: e.target.value })}
+              className="w-28 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 placeholder:text-slate-650 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all"
+            />
+          </div>
+
+          {/* Vehicle Number */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">Vehicle No</span>
+            <input 
+              type="text"
+              placeholder="e.g. TN23 L4495"
+              value={metadata.vehicleNumber}
+              onChange={(e) => setMetadata({ ...metadata, vehicleNumber: e.target.value })}
+              className="w-28 bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 placeholder:text-slate-650 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all"
+            />
+          </div>
+
+          {/* From Branch */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">From</span>
+            <select
+              value={metadata.fromAmtBranch}
+              onChange={(e) => setMetadata({ ...metadata, fromAmtBranch: e.target.value })}
+              className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer animate-none"
+            >
+              <option value="" className="text-slate-650">Select Origin</option>
+              {branches.map((b) => (
+                <option key={b.branchId} value={b.branchName} disabled={b.branchName === metadata.toAmtBranch}>
+                  {b.branchName} {b.branchName === metadata.toAmtBranch ? "(Selected in To)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* To Branch */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">To</span>
+            <select
+              value={metadata.toAmtBranch}
+              onChange={(e) => setMetadata({ ...metadata, toAmtBranch: e.target.value })}
+              className="bg-slate-955/80 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
+            >
+              <option value="" className="text-slate-655">Select Destination</option>
+              {branches.map((b) => (
+                <option key={b.branchId} value={b.branchName} disabled={b.branchName === metadata.fromAmtBranch}>
+                  {b.branchName} {b.branchName === metadata.fromAmtBranch ? "(Selected in From)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        {/* Same-branch Validation Warning */}
+        {metadata.fromAmtBranch && metadata.toAmtBranch && metadata.fromAmtBranch === metadata.toAmtBranch && (
+          <div className="mx-6 mt-4 p-3 bg-red-955/20 border border-red-900/50 rounded-xl text-red-400 text-xs flex items-center gap-2 animate-pulse">
+            <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-semibold">Validation Error: Origin and Destination branches cannot be the same.</span>
+          </div>
+        )}
+
+        {/* Error Alert Banner */}
+        {errorMsg && (
+          <div className="mx-6 mt-4 p-3 bg-red-950/40 border border-red-900/50 rounded-xl text-red-400 text-xs flex justify-between items-center animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-2">
+              <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <span className="font-bold">OCR Pipeline Error: </span>
+                <span className="font-mono text-[11px]">{errorMsg}</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setErrorMsg("")}
+              className="text-slate-400 hover:text-slate-200 text-xs font-bold cursor-pointer px-2 py-1 hover:bg-slate-800 rounded-md"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Split Screen Workspace Area */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
@@ -605,8 +858,19 @@ export default function Dashboard() {
           {/* Right Panel: Editable Shipment Table */}
           <section className="flex flex-col bg-[#0b101c] h-full overflow-hidden">
             <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/50 flex justify-between items-center text-xs font-semibold text-slate-400 select-none">
-              <span>Editable Shipment Table</span>
-              <span className="text-[10px] text-slate-500 font-normal">Edit cells and review values</span>
+              <div className="flex items-center gap-2">
+                <span>Editable Shipment Table</span>
+                <span className="text-[10px] text-slate-500 font-normal">Edit cells and review values</span>
+              </div>
+              <button
+                onClick={handleAddRow}
+                className="px-3 py-1 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold rounded-lg shadow flex items-center gap-1 cursor-pointer transition-all"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Row</span>
+              </button>
             </div>
 
             <div className="flex-1 overflow-auto">
@@ -659,7 +923,7 @@ export default function Dashboard() {
                           </td>
                         </tr>
 
-                        {/* Client Validation Errors */}
+                        {/* Review Required Row */}
                         {!s.isValid && (
                           <tr className="bg-red-500/5 border-l-2 border-red-500/60 select-none">
                             <td colSpan={8} className="py-1.5 px-4">
@@ -667,7 +931,7 @@ export default function Dashboard() {
                                 <svg className="h-3.5 w-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span>Validation Errors: {s.validationErrors.join(", ")}</span>
+                                <span>Review Required: {s.validationErrors.join(", ")}</span>
                               </div>
                             </td>
                           </tr>
@@ -787,12 +1051,12 @@ export default function Dashboard() {
                   onChange={(e) => setMetadata({ ...metadata, fromAmtBranch: e.target.value })}
                   className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
                 >
-                  <option value="" className="text-slate-600">Select Origin Branch</option>
-                  <option value="Vaniyambadi">Vaniyambadi</option>
-                  <option value="Ambur">Ambur</option>
-                  <option value="Ranipet">Ranipet</option>
-                  <option value="Pallavaram">Pallavaram</option>
-                  <option value="Chennai">Chennai</option>
+                  <option value="" className="text-slate-650">Select Origin Branch</option>
+                  {branches.map((b) => (
+                    <option key={b.branchId} value={b.branchName} disabled={b.branchName === metadata.toAmtBranch}>
+                      {b.branchName} {b.branchName === metadata.toAmtBranch ? "(Selected in To)" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -802,16 +1066,26 @@ export default function Dashboard() {
                 <select
                   value={metadata.toAmtBranch}
                   onChange={(e) => setMetadata({ ...metadata, toAmtBranch: e.target.value })}
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
+                  className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
                 >
-                  <option value="" className="text-slate-600">Select Destination Branch</option>
-                  <option value="Vaniyambadi">Vaniyambadi</option>
-                  <option value="Ambur">Ambur</option>
-                  <option value="Ranipet">Ranipet</option>
-                  <option value="Pallavaram">Pallavaram</option>
-                  <option value="Chennai">Chennai</option>
+                  <option value="" className="text-slate-655">Select Destination Branch</option>
+                  {branches.map((b) => (
+                    <option key={b.branchId} value={b.branchName} disabled={b.branchName === metadata.fromAmtBranch}>
+                      {b.branchName} {b.branchName === metadata.fromAmtBranch ? "(Selected in From)" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              {/* Same-branch Validation Warning */}
+              {metadata.fromAmtBranch && metadata.toAmtBranch && metadata.fromAmtBranch === metadata.toAmtBranch && (
+                <p className="col-span-2 text-xs text-red-400 font-semibold mt-2 flex items-center gap-1.5 animate-pulse">
+                  <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Origin and Destination branches cannot be the same.</span>
+                </p>
+              )}
             </div>
           </div>
           <div className="mt-8 pt-4 border-t border-slate-850/60 text-[10px] text-slate-500 font-semibold flex items-center gap-1.5">
@@ -828,15 +1102,10 @@ export default function Dashboard() {
               <span>Upload Image & Run OCR</span>
             </h2>
             <p className="text-xs text-slate-400 mb-6">Select register sheet and extract data entries.</p>
-            
-            {/* Upload panel */}
+                  {/* Upload panel */}
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-5 mb-5 text-center cursor-pointer transition-all hover:bg-slate-850/50 flex flex-col items-center justify-center ${
-                uploadFile 
-                  ? "border-emerald-500/50 bg-emerald-950/5" 
-                  : "border-slate-800 hover:border-slate-700 bg-slate-950/40"
-              }`}
+              className="border-2 border-dashed rounded-xl p-5 mb-5 text-center cursor-pointer transition-all hover:bg-slate-850/50 flex flex-col items-center justify-center border-slate-800 hover:border-slate-700 bg-slate-950/40"
             >
               <input 
                 type="file" 
@@ -853,14 +1122,6 @@ export default function Dashboard() {
                   </svg>
                   <p className="text-xs text-slate-400 font-semibold">Uploading image...</p>
                 </div>
-              ) : uploadFile ? (
-                <div className="flex flex-col items-center">
-                  <svg className="h-6 w-6 text-emerald-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-xs text-slate-200 font-bold max-w-full truncate px-2">{uploadFile.name}</p>
-                  <span className="text-[10px] text-slate-500 mt-1">Click to replace image</span>
-                </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <svg className="h-6 w-6 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -876,8 +1137,8 @@ export default function Dashboard() {
           <div>
             {/* Step 3 Trigger */}
             <button
-              onClick={handleRunOCR}
-              disabled={loading || uploading || !uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "")}
+              onClick={() => handleRunOCR()}
+              disabled={loading || uploading || !uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && isBranchSelectionValid)}
               className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
