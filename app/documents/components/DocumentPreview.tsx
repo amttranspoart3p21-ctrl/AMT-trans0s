@@ -26,7 +26,7 @@ export default function DocumentPreview({
   // Compute totals dynamically based on config calculation callbacks
   const calculatedTotals = config.totals.map((t) => ({
     label: t.label,
-    value: t.calc(shipments),
+    value: t.calc(shipments, { branchName, companyName }),
   }));
 
   return (

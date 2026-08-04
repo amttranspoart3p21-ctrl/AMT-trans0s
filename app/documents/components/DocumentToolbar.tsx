@@ -4,12 +4,18 @@ interface DocumentToolbarProps {
   onFiltersToggle: () => void;
   showFilters: boolean;
   activeFiltersCount: number;
+  onPrint: () => void;
+  onExportPDF: () => void;
+  onExportExcel: () => void;
 }
 
 export default function DocumentToolbar({
   onFiltersToggle,
   showFilters,
   activeFiltersCount,
+  onPrint,
+  onExportPDF,
+  onExportExcel,
 }: DocumentToolbarProps) {
   return (
     <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 select-none backdrop-blur-md">
@@ -30,35 +36,35 @@ export default function DocumentToolbar({
         </button>
       </div>
 
-      {/* 2. Placeholder Print, PDF, Excel Actions */}
+      {/* 2. Action Buttons */}
       <div className="flex items-center justify-end gap-3 shrink-0">
         <button
-          disabled
-          className="px-4 py-2 bg-slate-800 border border-slate-700/60 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed flex items-center gap-1.5"
-          title="Print document (Reserved)"
+          onClick={onPrint}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5 transition-colors"
+          title="Print document"
         >
           🖨️ Print
         </button>
 
         <button
-          disabled
-          className="px-4 py-2 bg-slate-800 border border-slate-700/60 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed flex items-center gap-1.5"
-          title="Export as PDF file (Reserved)"
+          onClick={onExportPDF}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5 transition-colors"
+          title="Export as PDF file"
         >
           📕 Export PDF
         </button>
 
         <button
-          disabled
-          className="px-4 py-2 bg-slate-800 border border-slate-700/60 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed flex items-center gap-1.5"
-          title="Export as Excel workbook (Reserved)"
+          onClick={onExportExcel}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5 transition-colors"
+          title="Export as Excel workbook"
         >
           📤 Export Excel
         </button>
 
         <button
           disabled
-          className="px-4.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 text-slate-400 text-xs font-bold rounded-xl shadow-lg cursor-not-allowed flex items-center gap-1.5"
+          className="px-4.5 py-2 bg-gradient-to-r from-emerald-800/40 to-teal-800/40 text-slate-500 text-xs font-bold rounded-xl shadow-lg cursor-not-allowed flex items-center gap-1.5 border border-slate-800/50"
           title="Generate final invoice (Reserved)"
         >
           ⚙️ Generate

@@ -6,3 +6,76 @@
     color: #f3f4f6;
   }
 }
+
+@media print {
+  /* Hide all non-printable dashboard elements */
+  .no-print,
+  button,
+  select,
+  input,
+  header,
+  nav,
+  aside,
+  footer,
+  a {
+    display: none !important;
+  }
+
+  /* Reset layout backgrounds to print white */
+  body, html {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset all layout wrapper heights and styles */
+  .min-h-screen,
+  main,
+  div,
+  .flex-1 {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Stylize A4 document container specifically */
+  #printable-document {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 15mm !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: #000000 !important;
+  }
+
+  /* Format tables cleanly for print grids */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  td {
+    border: 1px solid #e2e8f0 !important;
+    color: #334155 !important;
+  }
+}
