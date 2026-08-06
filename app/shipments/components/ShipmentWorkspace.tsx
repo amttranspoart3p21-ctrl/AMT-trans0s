@@ -14,11 +14,38 @@ import type { Company } from "@/types/company";
 import type { Package } from "@/types/packageType";
 import type { CompanyRouteRate } from "@/types/company-route-rate";
 import type { GlobalRouteRate } from "@/types/global-route-rate";
+import { getFilteredPackageOptions, isGlobalRoutePackage } from "@/utils/package-filter";
+import { resolveCompanyDetails } from "@/utils/shipment-shared";
 
 // Import custom sub-components
+export const EDITABLE_COLUMNS: Array<keyof ShipmentRecord> = [
+  "date",
+  "vehicleNumber",
+  "fromAmtBranch",
+  "fromCompany",
+  "toAmtBranch",
+  "toCompany",
+  "packageType",
+  "quantity",
+  "transportRate",
+  "pricePerPiece",
+  "pickupService",
+  "pickupCharge",
+  "deliveryService",
+  "deliveryCharge",
+  "totalAmount",
+  "paymentReceivingBranch",
+  "paymentCompany",
+  "paymentStatus",
+  "deliveryStatus",
+  "ourInvoiceNumber",
+  "customerInvoiceNumber"
+];
+
 import ShipmentTable from "./ShipmentTable";
 import ShipmentFilters from "./ShipmentFilters";
 import Pagination from "./Pagination";
+import ShipmentModal from "./ShipmentModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ImageViewerModal from "./ImageViewerModal";
 import ShipmentToolbar from "./ShipmentToolbar";
@@ -70,6 +97,7 @@ export default function ShipmentWorkspace({
   const [packages, setPackages] = useState<Package[]>([]);
   const [companyRouteRates, setCompanyRouteRates] = useState<CompanyRouteRate[]>([]);
   const [globalRouteRates, setGlobalRouteRates] = useState<GlobalRouteRate[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // Base resolved name for context dashboards (e.g. branch name or company name)
   const [resolvedBaseName, setResolvedBaseName] = useState<string>("");
@@ -88,6 +116,84 @@ export default function ShipmentWorkspace({
   // Auto Fill & Manual Override tracking states
   const [manualOverrides, setManualOverrides] = useState<Record<string, Set<string>>>({});
   const [highlightedCells, setHighlightedCells] = useState<Record<string, Set<string>>>({});
+
+  // Undo / Redo history stacks
+  interface EditSnapshot {
+    shipments: ShipmentRecord[];
+    editedRows: Record<string, { original: ShipmentRecord; current: ShipmentRecord }>;
+    manualOverrides: Record<string, Set<string>>;
+  }
+  const [undoStack, setUndoStack] = useState<EditSnapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<EditSnapshot[]>([]);
+
+  const pushToUndo = (
+    currentShipments: ShipmentRecord[],
+    currentEditedRows: Record<string, { original: ShipmentRecord; current: ShipmentRecord }>,
+    currentOverrides: Record<string, Set<string>>
+  ) => {
+    const clonedOverrides: Record<string, Set<string>> = {};
+    Object.entries(currentOverrides).forEach(([id, s]) => {
+      clonedOverrides[id] = new Set(s);
+    });
+
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        shipments: JSON.parse(JSON.stringify(currentShipments)),
+        editedRows: JSON.parse(JSON.stringify(currentEditedRows)),
+        manualOverrides: clonedOverrides,
+      },
+    ]);
+    setRedoStack([]); // Clear redo stack on new action
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+
+    const clonedOverrides: Record<string, Set<string>> = {};
+    Object.entries(manualOverrides).forEach(([id, s]) => {
+      clonedOverrides[id] = new Set(s);
+    });
+    setRedoStack((prev) => [
+      ...prev,
+      {
+        shipments: JSON.parse(JSON.stringify(shipments)),
+        editedRows: JSON.parse(JSON.stringify(editedRows)),
+        manualOverrides: clonedOverrides,
+      },
+    ]);
+
+    setShipments(previous.shipments);
+    setEditedRows(previous.editedRows);
+    setManualOverrides(previous.manualOverrides);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+
+    const clonedOverrides: Record<string, Set<string>> = {};
+    Object.entries(manualOverrides).forEach(([id, s]) => {
+      clonedOverrides[id] = new Set(s);
+    });
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        shipments: JSON.parse(JSON.stringify(shipments)),
+        editedRows: JSON.parse(JSON.stringify(editedRows)),
+        manualOverrides: clonedOverrides,
+      },
+    ]);
+
+    setShipments(next.shipments);
+    setEditedRows(next.editedRows);
+    setManualOverrides(next.manualOverrides);
+  };
 
   // Search & Filter UI toggle
   const [showFilters, setShowFilters] = useState<boolean>(false);
@@ -123,9 +229,14 @@ export default function ShipmentWorkspace({
 
   // Pagination States
   const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(15);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalRecords, setTotalRecords] = useState<number>(0);
+
+  // Single Shipment Preview / Edit modal states
+  const [modalShipment, setModalShipment] = useState<ShipmentRecord | null>(null);
+  const [modalMode, setModalMode] = useState<"preview" | "edit">("preview");
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   // Modal States
   const [deleteShipmentId, setDeleteShipmentId] = useState<string | null>(null);
@@ -134,17 +245,19 @@ export default function ShipmentWorkspace({
 
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [shipmentPackages, setShipmentPackages] = useState<string[]>([]);
 
   // Fetch branches and all active master data objects on mount (runs locally)
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [branchRes, compRes, pkgRes, crrRes, grrRes] = await Promise.all([
+        const [branchRes, compRes, pkgRes, crrRes, grrRes, yearRes] = await Promise.all([
           fetch("/api/branches?status=Active"),
           fetch("/api/companies?status=Active"),
           fetch("/api/packages?status=Active"),
           fetch("/api/company-route-rates?status=Active"),
           fetch("/api/global-route-rates?status=Active"),
+          fetch("/api/shipments/years"),
         ]);
 
         if (branchRes.ok) {
@@ -166,6 +279,10 @@ export default function ShipmentWorkspace({
         if (grrRes.ok) {
           const json = await grrRes.json();
           if (json.routeRates) setGlobalRouteRates(json.routeRates);
+        }
+        if (yearRes.ok) {
+          const json = await yearRes.json();
+          if (json.success && Array.isArray(json.years)) setAvailableYears(json.years);
         }
       } catch (err) {
         console.error("Error loading master database:", err);
@@ -213,11 +330,48 @@ export default function ShipmentWorkspace({
     return () => clearTimeout(delayDebounceFn);
   }, [searchText]);
 
+  const fetchShipmentPackages = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.month) params.append("month", filters.month);
+      if (filters.year) params.append("year", filters.year);
+      if (filters.fromBranch) params.append("fromBranch", filters.fromBranch);
+      if (filters.toBranch) params.append("toBranch", filters.toBranch);
+      if (filters.company) params.append("company", filters.company);
+
+      const res = await fetch(`/api/shipments/packages?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.packages)) {
+          setShipmentPackages(json.packages);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading shipment packages:", err);
+    }
+  };
+
+  const fetchYears = async () => {
+    try {
+      const res = await fetch("/api/shipments/years");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.years)) {
+          setAvailableYears(json.years);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading years dynamically:", err);
+    }
+  };
+
   // Main fetch function
   const fetchShipments = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
+      fetchYears();
+      fetchShipmentPackages();
       const params = new URLSearchParams();
       params.append("page", String(page));
       params.append("limit", String(limit));
@@ -242,6 +396,8 @@ export default function ShipmentWorkspace({
       if (filters.deliveryService) params.append("deliveryService", filters.deliveryService);
       if (filters.ourInvoiceNumber) params.append("ourInvoiceNumber", filters.ourInvoiceNumber);
       if (filters.customerInvoiceNumber) params.append("customerInvoiceNumber", filters.customerInvoiceNumber);
+      if (filters.month) params.append("month", filters.month);
+      if (filters.year) params.append("year", filters.year);
 
       const res = await fetch(`/api/shipments?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load shipments database.");
@@ -284,6 +440,8 @@ export default function ShipmentWorkspace({
       } else if (context.type === "company") {
         params.append("company", resolvedBaseName);
       }
+      if (filters.month) params.append("month", filters.month);
+      if (filters.year) params.append("year", filters.year);
 
       const res = await fetch(`/api/shipments?${params.toString()}`);
       if (res.ok) {
@@ -297,7 +455,7 @@ export default function ShipmentWorkspace({
     } finally {
       setDashboardLoading(false);
     }
-  }, [context, resolvedBaseName]);
+  }, [context, resolvedBaseName, filters]);
 
   // Load shipments on page, filters, or sorting change
   useEffect(() => {
@@ -325,53 +483,140 @@ export default function ShipmentWorkspace({
   const calculatePricingLocally = (shipment: ShipmentRecord) => {
     const fromBranchKey = (shipment.fromAmtBranch || "").trim().toLowerCase();
     const toBranchKey = (shipment.toAmtBranch || "").trim().toLowerCase();
-    const packageKey = (shipment.packageType || "").trim().toLowerCase();
+    
+    // Extract base package name to match route rates correctly (ignoring suffix)
+    const getBasePackageName = (val: string): string => {
+      const idx = val.indexOf("(");
+      if (idx !== -1) return val.substring(0, idx).trim();
+      return val.trim();
+    };
+    const packageKey = getBasePackageName(shipment.packageType || "").trim().toLowerCase();
 
     const paymentCompanyVal = shipment.paymentCompany || "";
     if (!paymentCompanyVal) {
-      return { transportRate: null, pricePerPiece: null };
+      return { transportRate: null, pickupCharge: null, deliveryCharge: null, pricePerPiece: null };
     }
-    const paymentCompanyObj = companies.find((c) => c.companyName === paymentCompanyVal);
-    const paymentCompanyId = paymentCompanyObj?.companyId || "";
 
-    const packageExists = packages.some(
-      (p) => p.status === "Active" && p.packageName.trim().toLowerCase() === packageKey
+    const payBranchName = shipment.paymentReceivingBranch === "From Company" ? shipment.fromAmtBranch : shipment.paymentReceivingBranch === "To Company" ? shipment.toAmtBranch : "";
+    const paymentCompanyDetails = resolveCompanyDetails(paymentCompanyVal, payBranchName, companies);
+    const paymentCompanyId = paymentCompanyDetails.companyId;
+
+    const fromCompanyDetails = resolveCompanyDetails(shipment.fromCompany, shipment.fromAmtBranch, companies);
+    const fromCompanyId = fromCompanyDetails.companyId;
+
+    const toCompanyDetails = resolveCompanyDetails(shipment.toCompany, shipment.toAmtBranch, companies);
+    const toCompanyId = toCompanyDetails.companyId;
+
+    const packageObj = packages.find(
+      (p) => p.packageName.trim().toLowerCase() === packageKey
     );
+    const packageId = packageObj?.packageId || "";
+    const packageExists = !!packageObj && packageObj.status === "Active";
 
     if (!packageExists) {
-      return { transportRate: null, pricePerPiece: null };
+      return { transportRate: null, pickupCharge: null, deliveryCharge: null, pricePerPiece: null };
     }
+
+    const fromBranchObj = branches.find(
+      (b) => b.branchName?.trim().toLowerCase() === fromBranchKey
+    );
+    const fromBranchId = fromBranchObj?.branchId || "";
+
+    const toBranchObj = branches.find(
+      (b) => b.branchName?.trim().toLowerCase() === toBranchKey
+    );
+    const toBranchId = toBranchObj?.branchId || "";
 
     let transportRate: number | null = null;
     let pickupCharge = 0;
     let deliveryCharge = 0;
+    let isGlobalPackage = false;
 
+    // 1. Resolve Transport Rate
     const matchedCompanyRate = companyRouteRates.find(
       (c) =>
         c.status === "Active" &&
         c.companyId === paymentCompanyId &&
-        c.fromBranchName.trim().toLowerCase() === fromBranchKey &&
-        c.toBranchName.trim().toLowerCase() === toBranchKey &&
-        c.packageName.trim().toLowerCase() === packageKey
+        (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
+        (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
+        (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
     );
 
     if (matchedCompanyRate) {
       transportRate = matchedCompanyRate.transportRate;
-      pickupCharge = matchedCompanyRate.pickupCharge || 0;
-      deliveryCharge = matchedCompanyRate.deliveryCharge || 0;
     } else {
       const matchedGlobalRate = globalRouteRates.find(
         (g) =>
           g.status === "Active" &&
-          g.fromBranchName.trim().toLowerCase() === fromBranchKey &&
-          g.toBranchName.trim().toLowerCase() === toBranchKey &&
-          g.packageName.trim().toLowerCase() === packageKey
+          (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.trim().toLowerCase() === fromBranchKey) : g.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
+          (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.trim().toLowerCase() === toBranchKey) : g.toBranchName.trim().toLowerCase() === toBranchKey) &&
+          (packageId ? (g.packageId === packageId || g.packageName.trim().toLowerCase() === packageKey) : g.packageName.trim().toLowerCase() === packageKey)
       );
 
       if (matchedGlobalRate) {
         transportRate = matchedGlobalRate.rate;
+        isGlobalPackage = true;
       }
     }
+
+    let matchedFromCompanyRate;
+    let matchedToCompanyRate;
+
+    if (isGlobalPackage) {
+      pickupCharge = 0;
+      deliveryCharge = 0;
+    } else {
+      // 2. Resolve Pickup Charge (always belongs to Sender Company package)
+      if (shipment.pickupService === "Branch" || shipment.pickupService === "Free Home") {
+        pickupCharge = 0;
+      } else if (shipment.pickupService === "Home") {
+        matchedFromCompanyRate = companyRouteRates.find(
+          (c) =>
+            c.status === "Active" &&
+            c.companyId === fromCompanyId &&
+            (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
+            (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
+            (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
+        );
+        if (
+          matchedFromCompanyRate &&
+          typeof matchedFromCompanyRate.pickupCharge === "number" &&
+          !isNaN(matchedFromCompanyRate.pickupCharge)
+        ) {
+          pickupCharge = matchedFromCompanyRate.pickupCharge;
+        } else {
+          pickupCharge = 0;
+        }
+      }
+
+      // 3. Resolve Delivery Charge (always belongs to Receiver Company package)
+      if (shipment.deliveryService === "Branch" || shipment.deliveryService === "Free Home") {
+        deliveryCharge = 0;
+      } else if (shipment.deliveryService === "Home") {
+        matchedToCompanyRate = companyRouteRates.find(
+          (c) =>
+            c.status === "Active" &&
+            c.companyId === toCompanyId &&
+            (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
+            (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
+            (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
+        );
+        if (
+          matchedToCompanyRate &&
+          typeof matchedToCompanyRate.deliveryCharge === "number" &&
+          !isNaN(matchedToCompanyRate.deliveryCharge)
+        ) {
+          deliveryCharge = matchedToCompanyRate.deliveryCharge;
+        } else {
+          deliveryCharge = 0;
+        }
+      }
+    }
+
+    console.log({
+      pickupChargeFromDB: matchedFromCompanyRate?.pickupCharge,
+      finalPickupChargeBeingSaved: pickupCharge
+    });
 
     let pricePerPiece: number | null = null;
     if (transportRate !== null) {
@@ -380,6 +625,8 @@ export default function ShipmentWorkspace({
 
     return {
       transportRate,
+      pickupCharge,
+      deliveryCharge,
       pricePerPiece,
     };
   };
@@ -407,8 +654,259 @@ export default function ShipmentWorkspace({
     }, 1000);
   };
 
+  const applyRowUpdates = (
+    originalShipment: ShipmentRecord,
+    updatedFields: Partial<ShipmentRecord>,
+    overrides: Set<string>
+  ) => {
+    const currentRecord = { ...originalShipment, ...updatedFields };
+    const autoFills: Partial<ShipmentRecord> = {};
+
+    // 1. paymentReceivingBranch logic
+    if ("paymentReceivingBranch" in updatedFields) {
+      overrides.delete("paymentCompany");
+    }
+
+    const isPaymentCompanyManual = overrides.has("paymentCompany") && !("paymentReceivingBranch" in updatedFields);
+    
+    if (
+      "paymentReceivingBranch" in updatedFields ||
+      "fromCompany" in updatedFields ||
+      "toCompany" in updatedFields
+    ) {
+      if (!isPaymentCompanyManual) {
+        if (currentRecord.paymentReceivingBranch === "From Company" && currentRecord.fromCompany) {
+          const resolved = resolveCompanyDetails(currentRecord.fromCompany, currentRecord.fromAmtBranch, companies);
+          autoFills.paymentCompany = resolved.companyName;
+          currentRecord.paymentCompany = resolved.companyName;
+        } else if (currentRecord.paymentReceivingBranch === "To Company" && currentRecord.toCompany) {
+          const resolved = resolveCompanyDetails(currentRecord.toCompany, currentRecord.toAmtBranch, companies);
+          autoFills.paymentCompany = resolved.companyName;
+          currentRecord.paymentCompany = resolved.companyName;
+        }
+      }
+    }
+
+    // 2. branch integrity logic
+    if ("fromAmtBranch" in updatedFields) {
+      const value = currentRecord.fromAmtBranch;
+      const branchObj = branches.find((b) => b.branchName?.trim().toLowerCase() === value?.trim().toLowerCase());
+      const validFromCompanies = companies
+        .filter((c) => branchObj && c.branchId === branchObj.branchId)
+        .map((c) => c.companyName);
+      if (currentRecord.fromCompany && !validFromCompanies.includes(currentRecord.fromCompany) && !("fromCompany" in updatedFields)) {
+        autoFills.fromCompany = "";
+        currentRecord.fromCompany = "";
+      }
+    }
+    if ("toAmtBranch" in updatedFields) {
+      const value = currentRecord.toAmtBranch;
+      const branchObj = branches.find((b) => b.branchName?.trim().toLowerCase() === value?.trim().toLowerCase());
+      const validToCompanies = companies
+        .filter((c) => branchObj && c.branchId === branchObj.branchId)
+        .map((c) => c.companyName);
+      if (currentRecord.toCompany && !validToCompanies.includes(currentRecord.toCompany) && !("toCompany" in updatedFields)) {
+        autoFills.toCompany = "";
+        currentRecord.toCompany = "";
+      }
+    }
+
+    // Check global package transition
+    const wasGlobal = isGlobalRoutePackage(
+      originalShipment.packageType,
+      originalShipment.fromAmtBranch,
+      originalShipment.toAmtBranch,
+      originalShipment.paymentCompany,
+      companyRouteRates,
+      globalRouteRates,
+      companies,
+      branches,
+      originalShipment.paymentReceivingBranch
+    );
+
+    const tempRecord = { ...currentRecord, ...autoFills };
+    const isNowGlobal = isGlobalRoutePackage(
+      tempRecord.packageType,
+      tempRecord.fromAmtBranch,
+      tempRecord.toAmtBranch,
+      tempRecord.paymentCompany,
+      companyRouteRates,
+      globalRouteRates,
+      companies,
+      branches,
+      tempRecord.paymentReceivingBranch
+    );
+
+    if (isNowGlobal && !wasGlobal) {
+      autoFills.pickupService = "Branch";
+      autoFills.deliveryService = "Branch";
+      autoFills.pickupCharge = 0;
+      autoFills.deliveryCharge = 0;
+      currentRecord.pickupService = "Branch";
+      currentRecord.deliveryService = "Branch";
+      currentRecord.pickupCharge = 0;
+      currentRecord.deliveryCharge = 0;
+    }
+
+    // 3. Dynamic package validation logic
+    if (
+      "fromAmtBranch" in updatedFields ||
+      "toAmtBranch" in updatedFields ||
+      "paymentCompany" in updatedFields ||
+      "paymentReceivingBranch" in updatedFields ||
+      ("paymentCompany" in autoFills)
+    ) {
+      const currentPkg = currentRecord.packageType?.trim();
+      if (currentPkg && currentPkg.includes("(")) {
+        // If it is a company-specific rate package, verify if it is still valid
+        const validOptions = getFilteredPackageOptions(
+          currentRecord.fromAmtBranch,
+          currentRecord.toAmtBranch,
+          currentRecord.paymentCompany,
+          companyRouteRates,
+          globalRouteRates,
+          companies,
+          branches,
+          currentRecord.paymentReceivingBranch
+        );
+        const validValues = validOptions.map(opt => opt.value.toLowerCase().trim());
+        if (!validValues.includes(currentPkg.toLowerCase()) && !("packageType" in updatedFields)) {
+          autoFills.packageType = "";
+          currentRecord.packageType = "";
+        }
+      }
+    }
+
+    // 3. pricing trigger logic
+    const pricingTriggerFields = [
+      "fromAmtBranch",
+      "fromCompany",
+      "toAmtBranch",
+      "toCompany",
+      "packageType",
+      "paymentCompany",
+      "paymentReceivingBranch",
+      "pickupService",
+      "deliveryService",
+      "quantity",
+    ];
+
+    const hasPricingTrigger = pricingTriggerFields.some(
+      (field) => field in updatedFields || field in autoFills
+    );
+
+    if (hasPricingTrigger) {
+      const calc = calculatePricingLocally(currentRecord);
+
+      const isTransportRateManual = overrides.has("transportRate") || ("transportRate" in updatedFields);
+      const isPricePerPieceManual = overrides.has("pricePerPiece") || ("pricePerPiece" in updatedFields);
+
+      if (!isTransportRateManual) {
+        autoFills.transportRate = calc.transportRate;
+        currentRecord.transportRate = calc.transportRate;
+      }
+      
+      autoFills.pickupCharge = calc.pickupCharge;
+      currentRecord.pickupCharge = calc.pickupCharge;
+      
+      autoFills.deliveryCharge = calc.deliveryCharge;
+      currentRecord.deliveryCharge = calc.deliveryCharge;
+
+      if (!isPricePerPieceManual) {
+        autoFills.pricePerPiece = calc.pricePerPiece;
+        currentRecord.pricePerPiece = calc.pricePerPiece;
+      }
+    }
+
+    // 4. total amount logic
+    if (currentRecord.pricePerPiece !== null && currentRecord.pricePerPiece !== undefined) {
+      const qty = calculateQuantity(currentRecord.quantity);
+      autoFills.totalAmount = qty * currentRecord.pricePerPiece;
+    } else {
+      autoFills.totalAmount = null;
+    }
+    currentRecord.totalAmount = autoFills.totalAmount;
+
+    return {
+      updatedShipment: currentRecord,
+      autoFills,
+    };
+  };
+
+  const handleBatchCellChanges = (rowUpdates: Record<string, Partial<ShipmentRecord>>) => {
+    const dirtyIds = Object.keys(rowUpdates);
+    if (dirtyIds.length === 0) return;
+
+    pushToUndo(shipments, editedRows, manualOverrides);
+
+    const highlightsToTrigger: Record<string, string[]> = {};
+    const nextManualOverridesMap: Record<string, Set<string>> = {};
+    const updatedRecordsMap: Record<string, ShipmentRecord> = {};
+    const originalRecordsMap: Record<string, ShipmentRecord> = {};
+
+    // 1. Pre-calculate updates using functional parameters
+    dirtyIds.forEach((shipmentId) => {
+      const currentShipment = shipments.find((s) => s.shipmentId === shipmentId);
+      if (!currentShipment) return;
+
+      const existing = manualOverrides[shipmentId] ? new Set(manualOverrides[shipmentId]) : new Set<string>();
+      Object.keys(rowUpdates[shipmentId]).forEach((field) => {
+        existing.add(field);
+      });
+      nextManualOverridesMap[shipmentId] = existing;
+
+      const originalRecord = editedRows[shipmentId]?.original || currentShipment;
+      originalRecordsMap[shipmentId] = originalRecord;
+
+      const { updatedShipment, autoFills } = applyRowUpdates(currentShipment, rowUpdates[shipmentId], existing);
+      updatedRecordsMap[shipmentId] = updatedShipment;
+
+      const filledKeys = Object.keys(autoFills).filter(
+        (k) => autoFills[k as keyof ShipmentRecord] !== currentShipment[k as keyof ShipmentRecord]
+      );
+      if (filledKeys.length > 0) {
+        highlightsToTrigger[shipmentId] = filledKeys;
+      }
+    });
+
+    // 2. Perform batched atomic state updates
+    setManualOverrides((prev) => {
+      const next = { ...prev };
+      Object.assign(next, nextManualOverridesMap);
+      return next;
+    });
+
+    setShipments((prev) =>
+      prev.map((s) => {
+        if (updatedRecordsMap[s.shipmentId]) {
+          return updatedRecordsMap[s.shipmentId];
+        }
+        return s;
+      })
+    );
+
+    setEditedRows((prev) => {
+      const next = { ...prev };
+      dirtyIds.forEach((shipmentId) => {
+        if (updatedRecordsMap[shipmentId]) {
+          next[shipmentId] = {
+            original: originalRecordsMap[shipmentId],
+            current: updatedRecordsMap[shipmentId],
+          };
+        }
+      });
+      return next;
+    });
+
+    // 3. Trigger highlights
+    Object.entries(highlightsToTrigger).forEach(([shipmentId, fields]) => {
+      triggerHighlight(shipmentId, fields);
+    });
+  };
+
   // Cell Change Handler (Runs Smart Auto-Fill & Business Rules locally)
   const handleCellChange = (shipmentId: string, field: keyof ShipmentRecord, value: any) => {
+    pushToUndo(shipments, editedRows, manualOverrides);
     setManualOverrides((prev) => {
       const existing = prev[shipmentId] ? new Set(prev[shipmentId]) : new Set<string>();
       existing.add(field);
@@ -420,24 +918,32 @@ export default function ShipmentWorkspace({
     const autoFills: Partial<ShipmentRecord> = {};
 
     if (field === "paymentReceivingBranch") {
-      const isManual = manualOverrides[shipmentId]?.has("paymentCompany");
-      if (!isManual) {
-        if (value === "From Company" && currentRecord.fromCompany) {
-          autoFills.paymentCompany = currentRecord.fromCompany;
-        } else if (value === "To Company" && currentRecord.toCompany) {
-          autoFills.paymentCompany = currentRecord.toCompany;
-        }
+      // Clear manual override for paymentCompany since payer branch type has changed
+      setManualOverrides((prev) => {
+        const existing = prev[shipmentId] ? new Set(prev[shipmentId]) : new Set<string>();
+        existing.delete("paymentCompany");
+        return { ...prev, [shipmentId]: existing };
+      });
+
+      if (value === "From Company" && currentRecord.fromCompany) {
+        const resolved = resolveCompanyDetails(currentRecord.fromCompany, currentRecord.fromAmtBranch, companies);
+        autoFills.paymentCompany = resolved.companyName;
+      } else if (value === "To Company" && currentRecord.toCompany) {
+        const resolved = resolveCompanyDetails(currentRecord.toCompany, currentRecord.toAmtBranch, companies);
+        autoFills.paymentCompany = resolved.companyName;
       }
     }
 
     if (field === "fromCompany" && currentRecord.paymentReceivingBranch === "From Company") {
       if (!manualOverrides[shipmentId]?.has("paymentCompany")) {
-        autoFills.paymentCompany = value;
+        const resolved = resolveCompanyDetails(value, currentRecord.fromAmtBranch, companies);
+        autoFills.paymentCompany = resolved.companyName;
       }
     }
     if (field === "toCompany" && currentRecord.paymentReceivingBranch === "To Company") {
       if (!manualOverrides[shipmentId]?.has("paymentCompany")) {
-        autoFills.paymentCompany = value;
+        const resolved = resolveCompanyDetails(value, currentRecord.toAmtBranch, companies);
+        autoFills.paymentCompany = resolved.companyName;
       }
     }
 
@@ -454,6 +960,67 @@ export default function ShipmentWorkspace({
       }
     }
 
+    // Check global package transition
+    const wasGlobal = isGlobalRoutePackage(
+      originalRecord.packageType,
+      originalRecord.fromAmtBranch,
+      originalRecord.toAmtBranch,
+      originalRecord.paymentCompany,
+      companyRouteRates,
+      globalRouteRates,
+      companies,
+      branches,
+      originalRecord.paymentReceivingBranch
+    );
+
+    const tempMerged = { ...currentRecord, ...autoFills };
+    const isNowGlobal = isGlobalRoutePackage(
+      tempMerged.packageType,
+      tempMerged.fromAmtBranch,
+      tempMerged.toAmtBranch,
+      tempMerged.paymentCompany,
+      companyRouteRates,
+      globalRouteRates,
+      companies,
+      branches,
+      tempMerged.paymentReceivingBranch
+    );
+
+    if (isNowGlobal && !wasGlobal) {
+      autoFills.pickupService = "Branch";
+      autoFills.deliveryService = "Branch";
+      autoFills.pickupCharge = 0;
+      autoFills.deliveryCharge = 0;
+    }
+
+    // Validate package list and clear if no longer valid
+    const tempRecord = { ...currentRecord, ...autoFills };
+    if (
+      field === "fromAmtBranch" ||
+      field === "toAmtBranch" ||
+      field === "paymentCompany" ||
+      field === "paymentReceivingBranch" ||
+      ("paymentCompany" in autoFills)
+    ) {
+      const currentPkg = tempRecord.packageType?.trim();
+      if (currentPkg && currentPkg.includes("(")) {
+        const validOptions = getFilteredPackageOptions(
+          tempRecord.fromAmtBranch,
+          tempRecord.toAmtBranch,
+          tempRecord.paymentCompany,
+          companyRouteRates,
+          globalRouteRates,
+          companies,
+          branches,
+          tempRecord.paymentReceivingBranch
+        );
+        const validValues = validOptions.map(opt => opt.value.toLowerCase().trim());
+        if (!validValues.includes(currentPkg.toLowerCase()) && field !== "packageType") {
+          autoFills.packageType = "";
+        }
+      }
+    }
+
     const finalRecord = { ...currentRecord, ...autoFills };
 
     const pricingTriggerFields = [
@@ -463,24 +1030,38 @@ export default function ShipmentWorkspace({
       "toCompany",
       "packageType",
       "paymentCompany",
+      "paymentReceivingBranch",
+      "pickupService",
+      "deliveryService",
+      "quantity",
     ];
 
-    if (pricingTriggerFields.includes(field)) {
+    if (pricingTriggerFields.includes(field) || Object.keys(autoFills).some(k => pricingTriggerFields.includes(k))) {
       const calc = calculatePricingLocally(finalRecord);
 
-      if (calc.transportRate !== null && !manualOverrides[shipmentId]?.has("transportRate")) {
+      if (!manualOverrides[shipmentId]?.has("transportRate")) {
         autoFills.transportRate = calc.transportRate;
         finalRecord.transportRate = calc.transportRate;
       }
-      if (calc.pricePerPiece !== null && !manualOverrides[shipmentId]?.has("pricePerPiece")) {
+      
+      autoFills.pickupCharge = calc.pickupCharge;
+      finalRecord.pickupCharge = calc.pickupCharge;
+      
+      autoFills.deliveryCharge = calc.deliveryCharge;
+      finalRecord.deliveryCharge = calc.deliveryCharge;
+
+      if (!manualOverrides[shipmentId]?.has("pricePerPiece")) {
         autoFills.pricePerPiece = calc.pricePerPiece;
         finalRecord.pricePerPiece = calc.pricePerPiece;
       }
     }
 
-    const qty = calculateQuantity(finalRecord.quantity);
-    const price = Number(finalRecord.pricePerPiece || 0);
-    autoFills.totalAmount = qty * price;
+    if (finalRecord.pricePerPiece !== null && finalRecord.pricePerPiece !== undefined) {
+      const qty = calculateQuantity(finalRecord.quantity);
+      autoFills.totalAmount = qty * finalRecord.pricePerPiece;
+    } else {
+      autoFills.totalAmount = null;
+    }
 
     const filledKeys = Object.keys(autoFills).filter(
       (k) => autoFills[k as keyof ShipmentRecord] !== originalRecord[k as keyof ShipmentRecord]
@@ -512,6 +1093,8 @@ export default function ShipmentWorkspace({
   const handleDiscardChanges = () => {
     if (Object.keys(editedRows).length === 0) return;
     if (confirm("Are you sure you want to discard all unsaved edits?")) {
+      setUndoStack([]);
+      setRedoStack([]);
       setEditedRows({});
       setManualOverrides({});
       setShipments((prev) =>
@@ -531,7 +1114,7 @@ export default function ShipmentWorkspace({
 
     setSaving(true);
     try {
-      const savePromises = dirtyIds.map(async (id) => {
+      const rowsPayload = dirtyIds.map((id) => {
         const editState = editedRows[id];
         const current = editState.current;
         const original = editState.original;
@@ -543,27 +1126,25 @@ export default function ShipmentWorkspace({
             updates[k] = current[k];
           }
         });
+        return { shipmentId: id, updates };
+      }).filter((item) => Object.keys(item.updates).length > 0);
 
-        if (Object.keys(updates).length === 0) return;
-
+      if (rowsPayload.length > 0) {
         const res = await fetch("/api/shipments/bulk", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            shipmentIds: [id],
-            updates,
-          }),
+          body: JSON.stringify({ rows: rowsPayload }),
         });
 
         if (!res.ok) {
           const errJson = await res.json();
-          throw new Error(errJson.message || `Failed to update shipment ${id}`);
+          throw new Error(errJson.message || "Failed to update shipments.");
         }
-      });
-
-      await Promise.all(savePromises);
+      }
 
       triggerToast(`Successfully saved updates to ${dirtyIds.length} shipments.`);
+      setUndoStack([]);
+      setRedoStack([]);
       setEditedRows({});
       setManualOverrides({});
       await fetchShipments();
@@ -573,6 +1154,43 @@ export default function ShipmentWorkspace({
       alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+  };
+
+  const handlePreviewShipment = (shipment: ShipmentRecord) => {
+    setModalShipment(shipment);
+    setModalMode("preview");
+    setIsModalOpen(true);
+  };
+
+  const handleEditShipment = (shipment: ShipmentRecord) => {
+    setModalShipment(shipment);
+    setModalMode("edit");
+    setIsModalOpen(true);
+  };
+
+  const handleModalSave = async (updated: ShipmentRecord) => {
+    try {
+      const res = await fetch(`/api/shipments/${updated.shipmentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.message || "Failed to update shipment.");
+      }
+      triggerToast("Shipment updated successfully.");
+      await fetchShipments();
+      await fetchDashboardKPIs();
+    } catch (err: any) {
+      console.error("Error saving modal changes:", err);
+      throw err;
     }
   };
 
@@ -609,6 +1227,11 @@ export default function ShipmentWorkspace({
     setPage(1);
   };
 
+  const handleFilterChange = (newFilters: IFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+  };
+
   // Trigger Toast Notification
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -634,7 +1257,12 @@ export default function ShipmentWorkspace({
           setEditedRows(updatedEdits);
         }
         setSelectedIds((prev) => prev.filter((id) => id !== deleteShipmentId));
-        await fetchShipments();
+        const isLastItemOnPage = shipments.length === 1;
+        if (isLastItemOnPage && page > 1) {
+          setPage(page - 1);
+        } else {
+          await fetchShipments();
+        }
         await fetchDashboardKPIs();
       } else {
         throw new Error(json.message || "Could not delete shipment.");
@@ -651,8 +1279,82 @@ export default function ShipmentWorkspace({
   // Check if context lookup is resolved
   const isContextLoading = context.type !== "global" && !resolvedBaseName;
 
+  let emptyStateMsg = "No shipments found";
+  if (filters.month || filters.year) {
+    const mStr = filters.month || "";
+    const yStr = filters.year || "";
+    if (mStr && yStr) {
+      emptyStateMsg = `No shipments found for ${mStr} ${yStr}.`;
+    } else if (mStr) {
+      emptyStateMsg = `No shipments found for ${mStr}.`;
+    } else if (yStr) {
+      emptyStateMsg = `No shipments found for Year ${yStr}.`;
+    }
+  }
+
+  const buildPackageOptions = () => {
+    const list: any[] = [];
+    const seenValues = new Set<string>();
+
+    // 1. Global packages
+    const globalPkgs = packages.filter((p) => !p.companyName && p.status === "Active");
+    globalPkgs.forEach((p) => {
+      const val = p.packageName;
+      if (!seenValues.has(val.toLowerCase())) {
+        seenValues.add(val.toLowerCase());
+        list.push({
+          value: val,
+          label: `📦 ${val}`,
+          badge: "Global",
+          badgeType: "global",
+        });
+      }
+    });
+
+    // 2. Company packages
+    const companyPkgs = packages.filter((p) => p.companyName && p.status === "Active");
+    companyPkgs.forEach((p) => {
+      const comp = companies.find((c) => c.companyId === p.companyId);
+      const branch = branches.find((b) => b.branchId === comp?.branchId || b.branchName === comp?.branchName);
+      
+      const bCode = branch?.branchCode || comp?.branchCode || comp?.branchName?.slice(0, 3).toUpperCase() || "";
+      const displayBranchCode = bCode ? ` - ${bCode}` : "";
+      
+      const val = `${p.packageName} (${p.companyName}${displayBranchCode})`;
+      if (!seenValues.has(val.toLowerCase())) {
+        seenValues.add(val.toLowerCase());
+        list.push({
+          value: val,
+          label: `📦 ${val}`,
+          badge: "Company",
+          badgeType: "company",
+        });
+      }
+    });
+
+    // 3. Unknown / OCR packages from shipments
+    shipmentPackages.forEach((pkgVal) => {
+      const isRegistered = packages.some(
+        (p) => p.packageName.toLowerCase().trim() === pkgVal.toLowerCase().trim()
+      );
+      if (!isRegistered && !seenValues.has(pkgVal.toLowerCase())) {
+        seenValues.add(pkgVal.toLowerCase());
+        list.push({
+          value: pkgVal,
+          label: `⚠ ${pkgVal}`,
+          badge: "Shipment Only",
+          badgeType: "shipment",
+        });
+      }
+    });
+
+    return list;
+  };
+
+  const packageOptions = buildPackageOptions();
+
   return (
-    <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto relative select-none">
+    <div className="flex-1 flex flex-col p-6 w-full mx-auto relative select-none">
       {/* Header Panel */}
       <header className="flex justify-between items-center pb-6 border-b border-slate-800">
         <div>
@@ -745,10 +1447,12 @@ export default function ShipmentWorkspace({
           <div className="mb-4">
             <ShipmentFilters
               filters={filters}
-              onChange={setFilters}
+              onChange={handleFilterChange}
               branches={branches}
               onReset={handleResetFilters}
               visible={showFilters}
+              availableYears={availableYears}
+              packageOptions={packageOptions}
             />
           </div>
 
@@ -763,6 +1467,10 @@ export default function ShipmentWorkspace({
               modifiedCount={Object.keys(editedRows).length}
               saving={saving}
               actions={actions}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={undoStack.length > 0}
+              canRedo={redoStack.length > 0}
             />
           </div>
 
@@ -795,6 +1503,7 @@ export default function ShipmentWorkspace({
               onSort={handleSort}
               mode={mode}
               onChangeRow={handleCellChange}
+              onBatchChangeRow={handleBatchCellChanges}
               branches={branches}
               onViewImage={(imageId, fileName) => setActiveImageDetails({ imageId, fileName })}
               selectedIds={selectedIds}
@@ -803,7 +1512,12 @@ export default function ShipmentWorkspace({
               dirtyRows={editedRows}
               companies={companies}
               packages={packages}
+              companyRouteRates={companyRouteRates}
+              globalRouteRates={globalRouteRates}
               highlightedCells={highlightedCells}
+              emptyStateMessage={emptyStateMsg}
+              onPreviewShipment={handlePreviewShipment}
+              onEditShipment={handleEditShipment}
             />
           </div>
 
@@ -814,9 +1528,27 @@ export default function ShipmentWorkspace({
                 page={page}
                 totalPages={totalPages}
                 onPageChange={setPage}
+                limit={limit}
+                onLimitChange={handleLimitChange}
+                totalRecords={totalRecords}
               />
             </div>
           )}
+
+          {/* Dynamic Edit / Preview Modal */}
+          <ShipmentModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            shipment={modalShipment}
+            mode={modalMode}
+            branches={branches}
+            companies={companies}
+            packages={packages}
+            companyRouteRates={companyRouteRates}
+            globalRouteRates={globalRouteRates}
+            onSave={handleModalSave}
+            calculatePricingLocally={calculatePricingLocally}
+          />
 
           {/* Delete Confirmation Modal */}
           <DeleteConfirmationModal

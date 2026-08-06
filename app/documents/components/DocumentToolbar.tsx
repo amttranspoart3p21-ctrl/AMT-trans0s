@@ -5,7 +5,6 @@ interface DocumentToolbarProps {
   showFilters: boolean;
   activeFiltersCount: number;
   onPrint: () => void;
-  onExportPDF: () => void;
   onExportExcel: () => void;
 }
 
@@ -14,7 +13,6 @@ export default function DocumentToolbar({
   showFilters,
   activeFiltersCount,
   onPrint,
-  onExportPDF,
   onExportExcel,
 }: DocumentToolbarProps) {
   return (
@@ -46,13 +44,6 @@ export default function DocumentToolbar({
           🖨️ Print
         </button>
 
-        <button
-          onClick={onExportPDF}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5 transition-colors"
-          title="Export as PDF file"
-        >
-          📕 Export PDF
-        </button>
 
         <button
           onClick={onExportExcel}

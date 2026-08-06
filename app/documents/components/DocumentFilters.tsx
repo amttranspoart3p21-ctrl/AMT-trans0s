@@ -9,6 +9,8 @@ interface DocumentFiltersProps {
   branches: Branch[];
   onReset: () => void;
   visible: boolean;
+  availableYears?: number[];
+  packageOptions?: any[];
 }
 
 export default function DocumentFilters({
@@ -17,6 +19,8 @@ export default function DocumentFilters({
   branches,
   onReset,
   visible,
+  availableYears = [],
+  packageOptions = [],
 }: DocumentFiltersProps) {
   return (
     <div className="w-full">
@@ -26,6 +30,8 @@ export default function DocumentFilters({
         branches={branches}
         onReset={onReset}
         visible={visible}
+        availableYears={availableYears}
+        packageOptions={packageOptions}
       />
     </div>
   );

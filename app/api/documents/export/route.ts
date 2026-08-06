@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       "search", "date", "dateFrom", "dateTo", "fromBranch", "toBranch",
       "deliveryStatus", "paymentStatus", "vehicleNumber", "fromCompany",
       "toCompany", "company", "packageType", "pickupService", "deliveryService",
-      "ourInvoiceNumber", "customerInvoiceNumber"
+      "ourInvoiceNumber", "customerInvoiceNumber", "month", "year"
     ];
     filterKeys.forEach(k => {
       const v = searchParams.get(k);
@@ -89,6 +89,12 @@ export async function GET(req: NextRequest) {
           cell.numFmt = '₹#,##0';
         } else if (col.format === "date") {
           cell.numFmt = 'yyyy-mm-dd';
+          if (typeof cell.value === "string" && cell.value !== "") {
+            const parsedDate = new Date(cell.value);
+            if (!isNaN(parsedDate.getTime())) {
+              cell.value = parsedDate;
+            }
+          }
         }
         
         // Borders

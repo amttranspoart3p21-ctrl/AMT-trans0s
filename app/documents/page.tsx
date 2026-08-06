@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import AdminLayout from "@/components/layout/AdminLayout";
 import type { ShipmentRecord, ShipmentFilters as IFilters } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import type { Company } from "@/types/company";
+import type { Package } from "@/types/packageType";
 
 // Import components
 import DocumentFilters from "./components/DocumentFilters";
@@ -47,14 +49,18 @@ export default function DocumentsPage() {
   // Active master list lookups
   const [branches, setBranches] = useState<Branch[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [shipmentPackages, setShipmentPackages] = useState<string[]>([]);
 
-  // Fetch active branch/company lists on mount
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [branchRes, compRes] = await Promise.all([
+        const [branchRes, compRes, yearRes, pkgRes] = await Promise.all([
           fetch("/api/branches?status=Active"),
           fetch("/api/companies?status=Active"),
+          fetch("/api/shipments/years"),
+          fetch("/api/packages?status=Active"),
         ]);
         if (branchRes.ok) {
           const json = await branchRes.json();
@@ -63,6 +69,14 @@ export default function DocumentsPage() {
         if (compRes.ok) {
           const json = await compRes.json();
           if (json.companies) setCompanies(json.companies);
+        }
+        if (yearRes.ok) {
+          const json = await yearRes.json();
+          if (json.success && Array.isArray(json.years)) setAvailableYears(json.years);
+        }
+        if (pkgRes.ok) {
+          const json = await pkgRes.json();
+          if (json.packages) setPackages(json.packages);
         }
       } catch (err) {
         console.error("Error fetching documents master data:", err);
@@ -76,6 +90,28 @@ export default function DocumentsPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
+      const fetchShipmentPackages = async () => {
+        try {
+          const p = new URLSearchParams();
+          if (filters.month) p.append("month", filters.month);
+          if (filters.year) p.append("year", filters.year);
+          if (filters.fromBranch) p.append("fromBranch", filters.fromBranch);
+          if (filters.toBranch) p.append("toBranch", filters.toBranch);
+          if (filters.company) p.append("company", filters.company);
+
+          const r = await fetch(`/api/shipments/packages?${p.toString()}`);
+          if (r.ok) {
+            const j = await r.json();
+            if (j.success && Array.isArray(j.packages)) {
+              setShipmentPackages(j.packages);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching packages in docs page:", err);
+        }
+      };
+      fetchShipmentPackages();
+
       const params = new URLSearchParams();
       // Notice: Do NOT pass limit/page parameters to fetch the full matching document rows!
       if (filters.search) params.append("search", filters.search);
@@ -95,6 +131,8 @@ export default function DocumentsPage() {
       if (filters.deliveryService) params.append("deliveryService", filters.deliveryService);
       if (filters.ourInvoiceNumber) params.append("ourInvoiceNumber", filters.ourInvoiceNumber);
       if (filters.customerInvoiceNumber) params.append("customerInvoiceNumber", filters.customerInvoiceNumber);
+      if (filters.month) params.append("month", filters.month);
+      if (filters.year) params.append("year", filters.year);
 
       const res = await fetch(`/api/shipments?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load shipment records.");
@@ -144,34 +182,6 @@ export default function DocumentsPage() {
     window.print();
   };
 
-  // PDF Export handler using on-demand html2pdf.js CDN injection
-  const handleExportPDF = () => {
-    const element = document.getElementById("printable-document");
-    if (!element) return;
-
-    const scriptId = "html2pdf-cdn-script";
-    const runExport = () => {
-      const opt = {
-        margin: 10,
-        filename: `${docType}-statement.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-      };
-      // @ts-ignore
-      window.html2pdf().from(element).set(opt).save();
-    };
-
-    if (document.getElementById(scriptId)) {
-      runExport();
-    } else {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-      script.onload = runExport;
-      document.body.appendChild(script);
-    }
-  };
 
   // Excel Export handler linking to the server-side generator API
   const handleExportExcel = () => {
@@ -206,128 +216,192 @@ export default function DocumentsPage() {
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
+  const buildPackageOptions = () => {
+    const list: any[] = [];
+    const seenValues = new Set<string>();
+
+    // 1. Global packages
+    const globalPkgs = packages.filter((p) => !p.companyName && p.status === "Active");
+    globalPkgs.forEach((p) => {
+      const val = p.packageName;
+      if (!seenValues.has(val.toLowerCase())) {
+        seenValues.add(val.toLowerCase());
+        list.push({
+          value: val,
+          label: `📦 ${val}`,
+          badge: "Global",
+          badgeType: "global",
+        });
+      }
+    });
+
+    // 2. Company packages
+    const companyPkgs = packages.filter((p) => p.companyName && p.status === "Active");
+    companyPkgs.forEach((p) => {
+      const comp = companies.find((c) => c.companyId === p.companyId);
+      const branch = branches.find((b) => b.branchId === comp?.branchId || b.branchName === comp?.branchName);
+      
+      const bCode = branch?.branchCode || comp?.branchCode || comp?.branchName?.slice(0, 3).toUpperCase() || "";
+      const displayBranchCode = bCode ? ` - ${bCode}` : "";
+
+      const val = `${p.packageName} (${p.companyName}${displayBranchCode})`;
+      if (!seenValues.has(val.toLowerCase())) {
+        seenValues.add(val.toLowerCase());
+        list.push({
+          value: val,
+          label: `📦 ${val}`,
+          badge: "Company",
+          badgeType: "company",
+        });
+      }
+    });
+
+    // 3. Unknown / OCR packages from shipments
+    shipmentPackages.forEach((pkgVal) => {
+      const isRegistered = packages.some(
+        (p) => p.packageName.toLowerCase().trim() === pkgVal.toLowerCase().trim()
+      );
+      if (!isRegistered && !seenValues.has(pkgVal.toLowerCase())) {
+        seenValues.add(pkgVal.toLowerCase());
+        list.push({
+          value: pkgVal,
+          label: `⚠ ${pkgVal}`,
+          badge: "Shipment Only",
+          badgeType: "shipment",
+        });
+      }
+    });
+
+    return list;
+  };
+
+  const packageOptions = buildPackageOptions();
+
   return (
-    <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto relative select-none">
-      {/* Header Panel */}
-      <header className="no-print flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-            Documents Center
-          </h1>
-          <p className="text-slate-400 mt-1 font-medium">
-            Generate and preview official statements, invoices, and logistics summaries
-          </p>
-        </div>
-        <div>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-355 hover:text-slate-200 border border-slate-700/60 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Dashboard
-          </Link>
-        </div>
-      </header>
-
-      {/* Selector & Action Toolbar Layout Grid */}
-      <div className="no-print grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        {/* Document Type Selector Card */}
-        <div className="bg-slate-905 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4 shadow-lg backdrop-blur-md">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Select Document Template
-          </label>
-          <div className="relative">
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              className="w-full bg-slate-955 border border-slate-800 text-xs text-slate-200 rounded-xl px-4 py-2.5 outline-none cursor-pointer focus:border-violet-500 focus:ring-1 focus:ring-violet-500 appearance-none shadow-md"
+    <AdminLayout>
+      <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto relative select-none">
+        {/* Header Panel */}
+        <header className="no-print flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Documents Center
+            </h1>
+            <p className="text-slate-400 mt-1 font-medium">
+              Generate and preview official statements, invoices, and logistics summaries
+            </p>
+          </div>
+          <div>
+            <Link
+              href="/"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-355 hover:text-slate-200 border border-slate-700/60 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
             >
-              <option value="shipment">Shipment Statement</option>
-              <option value="branch">Branch Statement</option>
-              <option value="company">Company Statement</option>
-              <option value="vehicle">Vehicle Statement</option>
-              <option value="payment">Payment Statement</option>
-              <option value="billing">Tax Invoice (Billing)</option>
-            </select>
-            <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-            </span>
+              Dashboard
+            </Link>
           </div>
-        </div>
+        </header>
 
-        {/* Global Documents Action Toolbar */}
-        <div className="lg:col-span-3">
-          <DocumentToolbar
-            onFiltersToggle={() => setShowFilters(!showFilters)}
-            showFilters={showFilters}
-            activeFiltersCount={activeFiltersCount}
-            onPrint={handlePrint}
-            onExportPDF={handleExportPDF}
-            onExportExcel={handleExportExcel}
-          />
-        </div>
-      </div>
-
-      {/* Advanced Filter Wrapper */}
-      <div className="no-print mb-6">
-        <DocumentFilters
-          filters={filters}
-          onChange={setFilters}
-          branches={branches}
-          onReset={handleResetFilters}
-          visible={showFilters}
-        />
-      </div>
-
-      {/* Main Document Preview Layout Panel */}
-      <div className="flex-1 flex flex-col items-center">
-        {loading ? (
-          <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
-            <svg className="animate-spin h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-              Evaluating document preview datasets...
-            </span>
-          </div>
-        ) : errorMsg ? (
-          <div className="w-full bg-red-950/40 border border-red-900/50 p-6 rounded-2xl text-center text-xs text-red-400 font-semibold flex flex-col items-center gap-3">
-            <span>{errorMsg}</span>
-            <button
-              onClick={fetchDocumentData}
-              className="px-4 py-2 bg-red-900/30 hover:bg-red-900/50 rounded-xl border border-red-800/40 transition-colors uppercase font-bold text-[10px]"
-            >
-              Retry Database Fetch
-            </button>
-          </div>
-        ) : shipments.length === 0 ? (
-          <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3 text-center">
-            <div className="h-12 w-12 rounded-full bg-slate-850/60 border border-slate-800 flex items-center justify-center text-slate-500 mb-2">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+        {/* Selector & Action Toolbar Layout Grid */}
+        <div className="no-print grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          {/* Document Type Selector Card */}
+          <div className="bg-slate-905 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4 shadow-lg backdrop-blur-md">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Select Document Template
+            </label>
+            <div className="relative">
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                className="w-full bg-slate-955 border border-slate-800 text-xs text-slate-200 rounded-xl px-4 py-2.5 outline-none cursor-pointer focus:border-violet-500 focus:ring-1 focus:ring-violet-500 appearance-none shadow-md"
+              >
+                <option value="shipment">Shipment Statement</option>
+                <option value="branch">Branch Statement</option>
+                <option value="company">Company Statement</option>
+                <option value="vehicle">Vehicle Statement</option>
+                <option value="payment">Payment Statement</option>
+                <option value="billing">Tax Invoice (Billing)</option>
+              </select>
+              <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </div>
-            <span className="text-xs font-semibold text-slate-350">No Matching Shipments Found</span>
-            <span className="text-[10px] text-slate-550 max-w-xs leading-normal">
-              We couldn't find any shipments matching the active filter parameters. Try adjusting the search query or resetting filters.
-            </span>
           </div>
-        ) : (
-          <DocumentPreview
-            config={activeConfig}
-            shipments={shipments}
-            branchName={branchName}
-            companyName={companyName}
-            dateRange={dateRangeStr}
-            generatedDate={todayStr}
+
+          {/* Global Documents Action Toolbar */}
+          <div className="lg:col-span-3">
+            <DocumentToolbar
+              onFiltersToggle={() => setShowFilters(!showFilters)}
+              showFilters={showFilters}
+              activeFiltersCount={activeFiltersCount}
+              onPrint={handlePrint}
+              onExportExcel={handleExportExcel}
+            />
+          </div>
+        </div>
+
+        {/* Advanced Filter Wrapper */}
+        <div className="no-print mb-6">
+          <DocumentFilters
+            filters={filters}
+            onChange={setFilters}
+            branches={branches}
+            onReset={handleResetFilters}
+            visible={showFilters}
+            availableYears={availableYears}
+            packageOptions={packageOptions}
           />
-        )}
+        </div>
+
+        {/* Main Document Preview Layout Panel */}
+        <div className="flex-1 flex flex-col items-center">
+          {loading ? (
+            <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
+              <svg className="animate-spin h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                Evaluating document preview datasets...
+              </span>
+            </div>
+          ) : errorMsg ? (
+            <div className="w-full bg-red-950/40 border border-red-900/50 p-6 rounded-2xl text-center text-xs text-red-400 font-semibold flex flex-col items-center gap-3">
+              <span>{errorMsg}</span>
+              <button
+                onClick={fetchDocumentData}
+                className="px-4 py-2 bg-red-900/30 hover:bg-red-900/50 rounded-xl border border-red-800/40 transition-colors uppercase font-bold text-[10px]"
+              >
+                Retry Database Fetch
+              </button>
+            </div>
+          ) : shipments.length === 0 ? (
+            <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3 text-center">
+              <div className="h-12 w-12 rounded-full bg-slate-850/60 border border-slate-800 flex items-center justify-center text-slate-500 mb-2">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="text-xs font-semibold text-slate-350">No Matching Shipments Found</span>
+              <span className="text-[10px] text-slate-550 max-w-xs leading-normal">
+                We couldn't find any shipments matching the active filter parameters. Try adjusting the search query or resetting filters.
+              </span>
+            </div>
+          ) : (
+            <DocumentPreview
+              config={activeConfig}
+              shipments={shipments}
+              branchName={branchName}
+              companyName={companyName}
+              dateRange={dateRangeStr}
+              generatedDate={todayStr}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

@@ -29,11 +29,13 @@
     padding: 0 !important;
   }
 
-  /* Reset all layout wrapper heights and styles */
+  /* Reset outer layout wrappers only, avoiding nested divs inside #printable-document */
   .min-h-screen,
   main,
-  div,
-  .flex-1 {
+  .flex-1,
+  div.max-w-7xl,
+  div.items-center,
+  div.bg-slate-950 {
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -41,6 +43,8 @@
     border: none !important;
     max-width: none !important;
     width: 100% !important;
+    height: auto !important;
+    display: block !important;
   }
 
   /* Stylize A4 document container specifically */

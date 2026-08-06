@@ -4,6 +4,7 @@ import { readPackages } from "@/lib/package";
 import type { Shipment } from "@/types/shipment";
 import { resolveCompanyDetails, resolveCompanyNamesInShipment, calculateQuantity } from "@/utils/shipment";
 import { readCompanies } from "@/lib/company";
+import { readBranches } from "@/lib/branch";
 
 export interface PricingCalculationResult {
   transportRate: number | null;
@@ -62,20 +63,22 @@ export async function calculateShipmentPricing(
 
   const fromBranchKey = (resolvedShipment.fromAmtBranch || "").trim().toLowerCase();
   const toBranchKey = (resolvedShipment.toAmtBranch || "").trim().toLowerCase();
-  const packageKey = (resolvedShipment.packageType || "").trim().toLowerCase();
+  const getBasePackageName = (val: string): string => {
+    const idx = val.indexOf("(");
+    if (idx !== -1) return val.substring(0, idx).trim();
+    return val.trim();
+  };
+  const packageKey = getBasePackageName(resolvedShipment.packageType || "").trim().toLowerCase();
 
-  // Check if package exists in the Package Master (active packages only) and is accessible to this company
+  // Check if package exists in the Package Master (active packages only)
   const packages = await readPackages();
-  const packageExists = packages.some(
+  const packageObj = packages.find(
     (p) =>
       p.status === "Active" &&
       (p.packageName.trim().toLowerCase() === packageKey ||
-        p.packageId.trim().toLowerCase() === packageKey) &&
-      (!p.companyId ||
-        (paymentCompanyId
-          ? p.companyId.toLowerCase() === paymentCompanyId.toLowerCase()
-          : p.companyName?.toLowerCase() === paymentCompanyResolved.toLowerCase()))
+        p.packageId.trim().toLowerCase() === packageKey)
   );
+  const packageExists = !!packageObj;
 
   if (!packageExists) {
     return {
@@ -87,22 +90,34 @@ export async function calculateShipmentPricing(
     };
   }
 
+  const packageId = packageObj.packageId;
+
+  // Resolve branch IDs
+  const branches = await readBranches();
+  const fromBranchObj = branches.find(
+    (b) => b.branchName?.trim().toLowerCase() === fromBranchKey
+  );
+  const fromBranchId = fromBranchObj?.branchId || "";
+
+  const toBranchObj = branches.find(
+    (b) => b.branchName?.trim().toLowerCase() === toBranchKey
+  );
+  const toBranchId = toBranchObj?.branchId || "";
+
   let transportRate: number | null = null;
-  let pickupCharge: number | null = null;
-  let deliveryCharge: number | null = null;
+  let pickupCharge = 0;
+  let deliveryCharge = 0;
+  let isGlobalPackage = false;
 
   // 1. Resolve Transport Rate
-  // STEP 1: Search Company Route Rate (Company + From Branch + To Branch + Package)
   const companyRates = await readCompanyRouteRates();
   const matchedCompanyRate = companyRates.find(
     (c) =>
       c.status === "Active" &&
-      (paymentCompanyId
-        ? c.companyId.toLowerCase() === paymentCompanyId.toLowerCase()
-        : c.companyName.toLowerCase() === paymentCompanyResolved.toLowerCase()) &&
-      (c.fromBranchId.toLowerCase() === fromBranchKey || c.fromBranchName.toLowerCase() === fromBranchKey) &&
-      (c.toBranchId.toLowerCase() === toBranchKey || c.toBranchName.toLowerCase() === toBranchKey) &&
-      (c.packageId.toLowerCase() === packageKey || c.packageName.toLowerCase() === packageKey)
+      c.companyId.toLowerCase() === paymentCompanyId.toLowerCase() &&
+      (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
+      (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
+      (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
   );
 
   if (matchedCompanyRate) {
@@ -113,61 +128,59 @@ export async function calculateShipmentPricing(
     const matchedGlobalRate = globalRates.find(
       (g) =>
         g.status === "Active" &&
-        (g.fromBranchId.toLowerCase() === fromBranchKey || g.fromBranchName.toLowerCase() === fromBranchKey) &&
-        (g.toBranchId.toLowerCase() === toBranchKey || g.toBranchName.toLowerCase() === toBranchKey) &&
-        (g.packageId.toLowerCase() === packageKey || g.packageName.toLowerCase() === packageKey)
+        (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.toLowerCase() === fromBranchKey) : g.fromBranchName.toLowerCase() === fromBranchKey) &&
+        (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.toLowerCase() === toBranchKey) : g.toBranchName.toLowerCase() === toBranchKey) &&
+        (packageId ? (g.packageId === packageId || g.packageName.toLowerCase() === packageKey) : g.packageName.toLowerCase() === packageKey)
     );
 
     if (matchedGlobalRate) {
       transportRate = matchedGlobalRate.rate;
+      isGlobalPackage = true;
     }
   }
 
-  // 2. Resolve Pickup Charge (depends on From Company)
-  if (resolvedShipment.pickupService === "Branch" || resolvedShipment.pickupService === "Free Home") {
+  if (isGlobalPackage) {
     pickupCharge = 0;
-  } else {
-    const matchedFromCompanyRate = companyRates.find(
-      (c) =>
-        c.status === "Active" &&
-        (fromCompanyId
-          ? c.companyId.toLowerCase() === fromCompanyId.toLowerCase()
-          : c.companyName.toLowerCase() === fromCompanyResolved.toLowerCase()) &&
-        (c.fromBranchId.toLowerCase() === fromBranchKey || c.fromBranchName.toLowerCase() === fromBranchKey) &&
-        (c.toBranchId.toLowerCase() === toBranchKey || c.toBranchName.toLowerCase() === toBranchKey) &&
-        (c.packageId.toLowerCase() === packageKey || c.packageName.toLowerCase() === packageKey)
-    );
-
-    if (matchedFromCompanyRate && typeof matchedFromCompanyRate.pickupCharge === "number" && !isNaN(matchedFromCompanyRate.pickupCharge)) {
-      pickupCharge = matchedFromCompanyRate.pickupCharge;
-    } else if (resolvedShipment.pickupService === undefined) {
-      // Fallback for cases like tests where pickupService is omitted:
-      // If no company-specific rate is configured, default to 0 (old behavior fallback)
-      pickupCharge = 0;
-    }
-  }
-
-  // 3. Resolve Delivery Charge (depends on To Company)
-  if (resolvedShipment.deliveryService === "Branch" || resolvedShipment.deliveryService === "Free Home") {
     deliveryCharge = 0;
   } else {
-    const matchedToCompanyRate = companyRates.find(
-      (c) =>
-        c.status === "Active" &&
-        (toCompanyId
-          ? c.companyId.toLowerCase() === toCompanyId.toLowerCase()
-          : c.companyName.toLowerCase() === toCompanyResolved.toLowerCase()) &&
-        (c.fromBranchId.toLowerCase() === fromBranchKey || c.fromBranchName.toLowerCase() === fromBranchKey) &&
-        (c.toBranchId.toLowerCase() === toBranchKey || c.toBranchName.toLowerCase() === toBranchKey) &&
-        (c.packageId.toLowerCase() === packageKey || c.packageName.toLowerCase() === packageKey)
-    );
+    // 2. Resolve Pickup Charge (always belongs to Sender Company package)
+    if (resolvedShipment.pickupService === "Branch" || resolvedShipment.pickupService === "Free Home") {
+      pickupCharge = 0;
+    } else if (resolvedShipment.pickupService === "Home") {
+      const matchedFromCompanyRate = companyRates.find(
+        (c) =>
+          c.status === "Active" &&
+          c.companyId.toLowerCase() === fromCompanyId.toLowerCase() &&
+          (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
+          (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
+          (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
+      );
 
-    if (matchedToCompanyRate && typeof matchedToCompanyRate.deliveryCharge === "number" && !isNaN(matchedToCompanyRate.deliveryCharge)) {
-      deliveryCharge = matchedToCompanyRate.deliveryCharge;
-    } else if (resolvedShipment.deliveryService === undefined) {
-      // Fallback for cases like tests where deliveryService is omitted:
-      // If no company-specific rate is configured, default to 0 (old behavior fallback)
+      if (matchedFromCompanyRate && typeof matchedFromCompanyRate.pickupCharge === "number" && !isNaN(matchedFromCompanyRate.pickupCharge)) {
+        pickupCharge = matchedFromCompanyRate.pickupCharge;
+      } else {
+        pickupCharge = 0;
+      }
+    }
+
+    // 3. Resolve Delivery Charge (always belongs to Receiver Company package)
+    if (resolvedShipment.deliveryService === "Branch" || resolvedShipment.deliveryService === "Free Home") {
       deliveryCharge = 0;
+    } else if (resolvedShipment.deliveryService === "Home") {
+      const matchedToCompanyRate = companyRates.find(
+        (c) =>
+          c.status === "Active" &&
+          c.companyId.toLowerCase() === toCompanyId.toLowerCase() &&
+          (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
+          (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
+          (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
+      );
+
+      if (matchedToCompanyRate && typeof matchedToCompanyRate.deliveryCharge === "number" && !isNaN(matchedToCompanyRate.deliveryCharge)) {
+        deliveryCharge = matchedToCompanyRate.deliveryCharge;
+      } else {
+        deliveryCharge = 0;
+      }
     }
   }
 
@@ -175,7 +188,7 @@ export async function calculateShipmentPricing(
   let pricePerPiece: number | null = null;
   let totalAmount: number | null = null;
 
-  if (transportRate !== null && pickupCharge !== null && deliveryCharge !== null) {
+  if (transportRate !== null) {
     pricePerPiece = transportRate + pickupCharge + deliveryCharge;
     const quantityNum = calculateQuantity(resolvedShipment.quantity);
     totalAmount = pricePerPiece * quantityNum;

@@ -60,7 +60,7 @@ const sumAmounts = (shipments: ShipmentRecord[]): number => {
 
 // Default Branding details
 const defaultBranding: BrandingConfig = {
-  companyName: "ANTIGRAVITY MOTOR TRANSPORT (AMT)",
+  companyName: "ANTIGRAVITY MOTOR TRANSPORT",
   address: "Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802",
   phone: "+91 98765 43210 / +91 87654 32109",
   email: "billing@amt-transport.com",
@@ -76,9 +76,9 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
     columns: [
       { header: "Date", key: "date", align: "left", format: "date" },
       { header: "Vehicle", key: "vehicleNumber", align: "left" },
-      { header: "From Branch", key: "fromAmtBranch", align: "left" },
+      { header: "From Branch", key: "fromBranch", align: "left" },
       { header: "From Company", key: "fromCompany", align: "left" },
-      { header: "To Branch", key: "toAmtBranch", align: "left" },
+      { header: "To Branch", key: "toBranch", align: "left" },
       { header: "To Company", key: "toCompany", align: "left" },
       { header: "Package", key: "packageType", align: "left" },
       { header: "Qty", key: "quantity", align: "center" },
@@ -97,7 +97,7 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
     columns: [
       { header: "Date", key: "date", align: "left", format: "date" },
       { header: "Vehicle", key: "vehicleNumber", align: "left" },
-      { header: "To Branch", key: "toAmtBranch", align: "left" },
+      { header: "To Branch", key: "toBranch", align: "left" },
       { header: "To Company", key: "toCompany", align: "left" },
       { header: "Package", key: "packageType", align: "left" },
       { header: "Qty", key: "quantity", align: "center" },
@@ -194,8 +194,8 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
     columns: [
       { header: "Date", key: "date", align: "left", format: "date" },
       { header: "Vehicle", key: "vehicleNumber", align: "left" },
-      { header: "From Branch", key: "fromAmtBranch", align: "left" },
-      { header: "To Branch", key: "toAmtBranch", align: "left" },
+      { header: "From Branch", key: "fromBranch", align: "left" },
+      { header: "To Branch", key: "toBranch", align: "left" },
       { header: "Package", key: "packageType", align: "left" },
       { header: "Qty", key: "quantity", align: "center" },
       { header: "Total Amount", key: "totalAmount", align: "right", format: "currency" },

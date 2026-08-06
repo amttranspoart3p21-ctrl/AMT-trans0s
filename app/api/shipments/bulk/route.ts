@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bulkUpdateShipments } from "@/services/shipment.service";
+import { bulkUpdateShipments, bulkUpdateSpreadsheetRows } from "@/services/shipment.service";
 
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    // Support row-specific spreadsheet batch updates
+    if (body.rows && Array.isArray(body.rows)) {
+      const { rows } = body;
+      if (rows.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: "No modifications to save.",
+          data: [],
+        });
+      }
+      
+      const updatedShipments = await bulkUpdateSpreadsheetRows(rows);
+      return NextResponse.json({
+        success: true,
+        message: `Successfully updated ${updatedShipments.length} shipments.`,
+        data: updatedShipments,
+      });
+    }
+
     const { shipmentIds, updates } = body;
 
     if (!shipmentIds || !Array.isArray(shipmentIds) || shipmentIds.length === 0) {

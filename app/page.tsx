@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import AdminLayout from "@/components/layout/AdminLayout";
 import type { Branch } from "@/types/branch";
 
 interface BoundingBox {
@@ -590,7 +591,8 @@ export default function Dashboard() {
   // ========================================================
   if (uploadFile !== null) {
     return (
-      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#070b13]">
+      <AdminLayout>
+        <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-[#070b13]">
         {/* Workspace Header Toolbar */}
         <header className="flex flex-col md:flex-row justify-between items-stretch md:items-center px-6 py-4 bg-slate-900/70 border-b border-slate-800 gap-4 backdrop-blur-md">
           <div className="flex items-center gap-3">
@@ -968,7 +970,8 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -976,13 +979,14 @@ export default function Dashboard() {
   // RENDER HOME: DASHBOARD OCR SCAN TRIGGER & FILE UPLOAD
   // ========================================================
   return (
-    <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto select-none">
+    <AdminLayout>
+      <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto select-none">
       {/* Header Banner */}
       <header className="flex justify-between items-center pb-6 border-b border-slate-800">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-            AMT transOS
-          </h1>
+            TMS transOS
+          </h1> 
           <p className="text-slate-400 mt-1 font-medium">OCR Shipment Extraction Console</p>
         </div>
         <div className="flex items-center gap-3">
@@ -1180,6 +1184,7 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

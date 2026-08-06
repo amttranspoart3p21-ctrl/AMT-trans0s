@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { ShipmentFilters as IFilters } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface ShipmentFiltersProps {
   filters: IFilters;
@@ -8,7 +9,107 @@ interface ShipmentFiltersProps {
   branches: Branch[];
   onReset: () => void;
   visible: boolean;
+  availableYears?: number[];
+  packageOptions?: any[];
 }
+
+const YearDropdown = ({
+  value,
+  onChange,
+  years,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  years: number[];
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredYears = years.filter((y) =>
+    String(y).toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative flex flex-col" ref={containerRef}>
+      <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5 font-semibold">Year</label>
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setSearch("");
+        }}
+        className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer flex justify-between items-center text-left"
+      >
+        <span>{value ? value : "All Years"}</span>
+        <svg
+          className={`h-3 w-3 text-slate-455 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[100%] left-0 right-0 z-50 mt-1 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl p-2 max-h-60 overflow-y-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search year..."
+            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 mb-2"
+            autoFocus
+          />
+          <div className="flex flex-col gap-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-350 hover:text-slate-100 transition-colors"
+            >
+              All Years
+            </button>
+            {filteredYears.length > 0 ? (
+              filteredYears.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => {
+                    onChange(String(y));
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 transition-colors ${
+                    value === String(y)
+                      ? "bg-violet-600/20 text-violet-400 border border-violet-500/30"
+                      : "text-slate-350 hover:text-slate-100"
+                  }`}
+                >
+                  {y}
+                </button>
+              ))
+            ) : (
+              <div className="text-[10px] text-slate-550 text-center py-2">No years found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ShipmentFilters({
   filters,
@@ -16,6 +117,8 @@ export default function ShipmentFilters({
   branches,
   onReset,
   visible,
+  availableYears = [],
+  packageOptions = [],
 }: ShipmentFiltersProps) {
   if (!visible) return null;
 
@@ -40,6 +143,33 @@ export default function ShipmentFilters({
           />
         </div>
 
+        {/* Month Filter */}
+        <div className="flex flex-col">
+          <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">Month</label>
+          <select
+            value={filters.month || ""}
+            onChange={(e) => handleFieldChange("month", e.target.value)}
+            className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
+          >
+            <option value="" className="text-slate-500">All Months</option>
+            {[
+              "January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December"
+            ].map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Year Filter */}
+        <YearDropdown
+          value={filters.year || ""}
+          onChange={(val) => handleFieldChange("year", val)}
+          years={availableYears}
+        />
+
         {/* Date From Filter */}
         <div className="flex flex-col">
           <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">Date From</label>
@@ -63,38 +193,32 @@ export default function ShipmentFilters({
         </div>
 
         {/* From Branch Filter */}
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1.5">From Branch</label>
-          <select
-            value={filters.fromBranch || ""}
-            onChange={(e) => handleFieldChange("fromBranch", e.target.value)}
-            className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
-          >
-            <option value="" className="text-slate-500">All Origin Branches</option>
-            {branches.map((b) => (
-              <option key={b.branchId} value={b.branchName} disabled={b.branchName === filters.toBranch}>
-                {b.branchName} {b.branchName === filters.toBranch ? "(Selected in To)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SearchableSelect
+          label="From Branch"
+          value={filters.fromBranch || ""}
+          onChange={(val) => handleFieldChange("fromBranch", val)}
+          placeholder="All Origin Branches"
+          options={branches.map((b) => ({
+            value: b.branchName,
+            label: b.branchName,
+            disabled: b.branchName === filters.toBranch,
+            disabledReason: "(Selected in To)",
+          }))}
+        />
 
         {/* To Branch Filter */}
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1.5">To Branch</label>
-          <select
-            value={filters.toBranch || ""}
-            onChange={(e) => handleFieldChange("toBranch", e.target.value)}
-            className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all cursor-pointer"
-          >
-            <option value="" className="text-slate-500">All Destination Branches</option>
-            {branches.map((b) => (
-              <option key={b.branchId} value={b.branchName} disabled={b.branchName === filters.fromBranch}>
-                {b.branchName} {b.branchName === filters.fromBranch ? "(Selected in From)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SearchableSelect
+          label="To Branch"
+          value={filters.toBranch || ""}
+          onChange={(val) => handleFieldChange("toBranch", val)}
+          placeholder="All Destination Branches"
+          options={branches.map((b) => ({
+            value: b.branchName,
+            label: b.branchName,
+            disabled: b.branchName === filters.fromBranch,
+            disabledReason: "(Selected in From)",
+          }))}
+        />
 
         {/* Vehicle Number Filter */}
         <div className="flex flex-col">
@@ -133,16 +257,13 @@ export default function ShipmentFilters({
         </div>
 
         {/* Package Type Filter */}
-        <div className="flex flex-col">
-          <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1.5">Package Type</label>
-          <input
-            type="text"
-            placeholder="e.g. Box, Roll"
-            value={filters.packageType || ""}
-            onChange={(e) => handleFieldChange("packageType", e.target.value)}
-            className="w-full bg-slate-955/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder:text-slate-650 outline-none focus:ring-1 focus:border-violet-500 focus:ring-violet-500 transition-all"
-          />
-        </div>
+        <SearchableSelect
+          label="Package Type"
+          value={filters.packageType || ""}
+          onChange={(val) => handleFieldChange("packageType", val)}
+          placeholder="All Package Types"
+          options={packageOptions}
+        />
 
         {/* Our Company Invoice */}
         <div className="flex flex-col">

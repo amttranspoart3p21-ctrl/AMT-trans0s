@@ -250,12 +250,31 @@ export function resolveWorkbookPath(year: number, month: string): string {
   return path.join(STORAGE_PATH, year.toString(), `${year}-${formattedMonth}.xlsx`);
 }
 
-// Reusable workbook loader - central point for future in-memory caching
+const workbookCache: { [path: string]: { workbook: ExcelJS.Workbook; mtime: number } } = {};
+
+// Reusable workbook loader - using in-memory cache with automatic cache invalidation on file changes
 export async function loadWorkbook(filePath: string): Promise<ExcelJS.Workbook | null> {
   if (!fs.existsSync(filePath)) return null;
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
-  return workbook;
+  
+  try {
+    const stats = fs.statSync(filePath);
+    const mtime = stats.mtimeMs;
+    
+    if (workbookCache[filePath] && workbookCache[filePath].mtime === mtime) {
+      return workbookCache[filePath].workbook;
+    }
+    
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    workbookCache[filePath] = { workbook, mtime };
+    return workbook;
+  } catch (err) {
+    console.error(`Error loading workbook ${filePath}:`, err);
+    // Fallback to non-cached if error occurs
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    return workbook;
+  }
 }
 
 // Loads multiple workbooks in parallel
@@ -594,7 +613,57 @@ export async function getShipments(
       list = list.filter(s => s.customerInvoiceNumber?.toLowerCase().includes(filters.customerInvoiceNumber!.toLowerCase()));
     }
     if (filters.packageType) {
-      list = list.filter(s => s.packageType?.toLowerCase().includes(filters.packageType!.toLowerCase()));
+      const match = filters.packageType.match(/^(.+?)\s*\((.+?)\)$/);
+      if (match) {
+        const pName = match[1].toLowerCase().trim();
+        const companyPart = match[2].trim();
+        const branchMatch = companyPart.match(/^(.+?)\s*-\s*([^-]+)$/);
+        
+        if (branchMatch) {
+          const cName = branchMatch[1].toLowerCase().trim();
+          const bCode = branchMatch[2].toLowerCase().trim();
+          
+          const { readCompanies } = require("@/lib/company");
+          const { readBranches } = require("@/lib/branch");
+          
+          const allCompanies = await readCompanies();
+          const allBranches = await readBranches();
+          
+          const targetBranch = allBranches.find(
+            (b: any) => b.branchCode.toLowerCase() === bCode || b.branchName.toLowerCase() === bCode
+          );
+          const targetBranchName = targetBranch?.branchName.toLowerCase();
+          
+          list = list.filter(s => {
+            const isPkgMatch = s.packageType?.toLowerCase() === pName;
+            if (!isPkgMatch) return false;
+            
+            const fromCompName = s.fromCompany?.toLowerCase();
+            const toCompName = s.toCompany?.toLowerCase();
+            const payCompName = s.paymentCompany?.toLowerCase();
+            
+            const fromBranchName = s.fromAmtBranch?.toLowerCase();
+            const toBranchName = s.toAmtBranch?.toLowerCase();
+            
+            const matchesSender = fromCompName === cName && fromBranchName === targetBranchName;
+            const matchesReceiver = toCompName === cName && toBranchName === targetBranchName;
+            const matchesPayment = payCompName === cName && (fromBranchName === targetBranchName || toBranchName === targetBranchName);
+            
+            return matchesSender || matchesReceiver || matchesPayment;
+          });
+        } else {
+          const cName = companyPart.toLowerCase().trim();
+          list = list.filter(s =>
+            s.packageType?.toLowerCase() === pName &&
+            (s.paymentCompany?.toLowerCase() === cName ||
+             s.fromCompany?.toLowerCase() === cName ||
+             s.toCompany?.toLowerCase() === cName)
+          );
+        }
+      } else {
+        const targetPkg = filters.packageType.toLowerCase().trim();
+        list = list.filter(s => s.packageType?.toLowerCase() === targetPkg);
+      }
     }
     if (filters.pickupService) {
       list = list.filter(s => s.pickupService === filters.pickupService);
@@ -741,6 +810,92 @@ export async function bulkUpdateShipments(shipmentIds: string[], updates: Partia
           updates.quantity !== undefined ||
           updates.pricePerPiece !== undefined ||
           updates.transportRate !== undefined
+        ) {
+          const quantityNum = calculateQuantity(resolvedShipment.quantity);
+          if (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined) {
+            resolvedShipment.totalAmount = resolvedShipment.pricePerPiece * quantityNum;
+          }
+        }
+        
+        writeShipmentToRow(row, resolvedShipment);
+        row.commit();
+        results.push(resolvedShipment);
+      }
+    }
+    
+    await workbook.xlsx.writeFile(wbPath);
+  }
+  
+  return results;
+}
+
+export async function bulkUpdateSpreadsheetRows(
+  rows: Array<{ shipmentId: string; updates: Partial<ShipmentRecord> }>
+): Promise<ShipmentRecord[]> {
+  const results: ShipmentRecord[] = [];
+  
+  // 1. Find locations for all shipments
+  const locations: { [shipmentId: string]: ShipmentLocation } = {};
+  for (const item of rows) {
+    const loc = await findShipmentLocation(item.shipmentId);
+    if (loc) {
+      locations[item.shipmentId] = loc;
+    }
+  }
+  
+  // 2. Group by workbook path
+  const workbooksGroup: {
+    [path: string]: Array<{
+      shipmentId: string;
+      updates: Partial<ShipmentRecord>;
+      location: ShipmentLocation;
+    }>;
+  } = {};
+  
+  for (const item of rows) {
+    const loc = locations[item.shipmentId];
+    if (!loc) continue;
+    if (!workbooksGroup[loc.workbookPath]) {
+      workbooksGroup[loc.workbookPath] = [];
+    }
+    workbooksGroup[loc.workbookPath].push({
+      shipmentId: item.shipmentId,
+      updates: item.updates,
+      location: loc,
+    });
+  }
+  
+  // 3. For each workbook, apply updates, commit, and write once
+  for (const wbPath of Object.keys(workbooksGroup)) {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(wbPath);
+    
+    const itemsInWorkbook = workbooksGroup[wbPath];
+    for (const item of itemsInWorkbook) {
+      const loc = item.location;
+      const worksheet = workbook.getWorksheet(loc.sheetName);
+      if (worksheet) {
+        const row = worksheet.getRow(loc.rowNumber);
+        const updatedShipment = {
+          ...loc.shipment,
+          ...item.updates,
+          shipmentId: item.shipmentId,
+        };
+        
+        let resolvedShipment = updatedShipment;
+        if (
+          item.updates.fromCompany ||
+          item.updates.toCompany ||
+          item.updates.paymentCompany ||
+          item.updates.paymentReceivingBranch
+        ) {
+          resolvedShipment = await resolveCompanyNamesInShipment(updatedShipment);
+        }
+        
+        if (
+          item.updates.quantity !== undefined ||
+          item.updates.pricePerPiece !== undefined ||
+          item.updates.transportRate !== undefined
         ) {
           const quantityNum = calculateQuantity(resolvedShipment.quantity);
           if (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined) {

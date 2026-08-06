@@ -10,6 +10,10 @@ interface ShipmentToolbarProps {
   modifiedCount: number;
   saving: boolean;
   actions?: WorkspaceAction[];
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 export default function ShipmentToolbar({
@@ -20,14 +24,18 @@ export default function ShipmentToolbar({
   hasChanges,
   modifiedCount,
   saving,
-  actions = ["spreadsheet", "export"],
+  actions = ["spreadsheet"],
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: ShipmentToolbarProps) {
   return (
     <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 select-none backdrop-blur-md">
       <div className="flex items-center gap-3">
         {/* Mode Toggle Selector */}
         {actions.includes("spreadsheet") && (
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex bg-slate-955 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setMode("read-only")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 ${
@@ -63,21 +71,33 @@ export default function ShipmentToolbar({
           <div className="h-6 w-px bg-slate-800 hidden md:block" />
         )}
 
-        {/* Undo / Redo Buttons (Reserved in Architecture) */}
+        {/* Undo / Redo Buttons */}
         <div className="flex items-center gap-1">
           <button
-            disabled
-            className="p-2 bg-slate-950/40 border border-slate-850/40 text-slate-600 rounded-xl text-xs font-semibold cursor-not-allowed hover:bg-slate-900/10"
-            title="Undo last change (Reserved)"
+            type="button"
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`p-2 rounded-xl text-xs font-semibold border transition-all ${
+              canUndo
+                ? "bg-slate-950 border-slate-800 text-slate-200 hover:bg-slate-900 cursor-pointer"
+                : "bg-slate-950/45 border-slate-850/40 text-slate-650 cursor-not-allowed"
+            }`}
+            title={canUndo ? "Undo last change" : "Nothing to undo"}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
             </svg>
           </button>
           <button
-            disabled
-            className="p-2 bg-slate-950/40 border border-slate-850/40 text-slate-600 rounded-xl text-xs font-semibold cursor-not-allowed hover:bg-slate-900/10"
-            title="Redo change (Reserved)"
+            type="button"
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`p-2 rounded-xl text-xs font-semibold border transition-all ${
+              canRedo
+                ? "bg-slate-950 border-slate-800 text-slate-200 hover:bg-slate-900 cursor-pointer"
+                : "bg-slate-950/45 border-slate-850/40 text-slate-655 cursor-not-allowed"
+            }`}
+            title={canRedo ? "Redo change" : "Nothing to redo"}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
@@ -96,16 +116,6 @@ export default function ShipmentToolbar({
         )}
 
         {/* Workspace Action Buttons */}
-        {actions.includes("export") && (
-          <button
-            disabled
-            className="px-4 py-2 bg-slate-800 border border-slate-700/60 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed flex items-center gap-1.5"
-            title="Export spreadsheet records (Reserved)"
-          >
-            📤 Export Excel
-          </button>
-        )}
-
         {actions.includes("statement") && (
           <button
             disabled

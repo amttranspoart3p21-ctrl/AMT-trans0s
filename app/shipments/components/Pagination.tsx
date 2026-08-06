@@ -4,10 +4,23 @@ interface PaginationProps {
   page: number;
   totalPages: number;
   onPageChange: (newPage: number) => void;
+  limit: number;
+  onLimitChange: (newLimit: number) => void;
+  totalRecords: number;
 }
 
-export default function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
-  if (totalPages <= 1) return null;
+export default function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  limit,
+  onLimitChange,
+  totalRecords,
+}: PaginationProps) {
+  if (totalRecords === 0) return null;
+
+  const fromIndex = (page - 1) * limit + 1;
+  const toIndex = Math.min(page * limit, totalRecords);
 
   const getPageNumbers = () => {
     const range: number[] = [];
@@ -38,32 +51,35 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
   };
 
   return (
-    <div className="flex items-center justify-between mt-6 px-4 py-3 bg-slate-900/40 backdrop-blur-md border border-slate-850 rounded-2xl shadow-lg">
-      <div className="flex-1 flex justify-between sm:hidden">
-        <button
-          onClick={() => onPageChange(Math.max(page - 1, 1))}
-          disabled={page === 1}
-          className="relative inline-flex items-center px-4 py-2 border border-slate-800 text-xs font-semibold rounded-xl text-slate-300 bg-slate-950/60 hover:bg-slate-850/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => onPageChange(Math.min(page + 1, totalPages))}
-          disabled={page === totalPages}
-          className="relative inline-flex items-center px-4 py-2 border border-slate-800 text-xs font-semibold rounded-xl text-slate-300 bg-slate-950/60 hover:bg-slate-850/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-        >
-          Next
-        </button>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-6 px-6 py-4 bg-slate-900/60 backdrop-blur-md border border-slate-850 rounded-2xl shadow-xl select-none">
+      {/* Left side: Range indicator */}
+      <div className="flex items-center">
+        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+          Showing <span className="font-bold text-slate-350">{fromIndex}–{toIndex}</span> of{" "}
+          <span className="font-bold text-slate-350">{totalRecords}</span> Shipments
+        </p>
       </div>
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+
+      {/* Middle: Rows per page selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rows per page:</span>
+        <select
+          value={limit}
+          onChange={(e) => onLimitChange(Number(e.target.value))}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-350 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none cursor-pointer"
+        >
+          {[15, 25, 50, 100].map((opt) => (
+            <option key={opt} value={opt}>
+              {opt} Rows
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Right side: Page navigation */}
+      {totalPages > 1 && (
         <div>
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-            Page <span className="font-semibold text-slate-350">{page}</span> of{" "}
-            <span className="font-semibold text-slate-350">{totalPages}</span>
-          </p>
-        </div>
-        <div>
-          <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px gap-1.5" aria-label="Pagination">
+          <nav className="relative z-0 inline-flex rounded-xl shadow-sm gap-1.5" aria-label="Pagination">
             {/* Previous */}
             <button
               onClick={() => onPageChange(Math.max(page - 1, 1))}
@@ -82,7 +98,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
                 return (
                   <span
                     key={`dots-${idx}`}
-                    className="relative inline-flex items-center px-3.5 py-1.5 text-xs font-semibold text-slate-500 select-none"
+                    className="relative inline-flex items-center px-3.5 py-1.5 text-xs font-bold text-slate-500 select-none"
                   >
                     ...
                   </span>
@@ -93,7 +109,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
                 <button
                   key={`page-${pageNum}`}
                   onClick={() => onPageChange(pageNum as number)}
-                  className={`relative inline-flex items-center px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  className={`relative inline-flex items-center px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     isCurrent
                       ? "z-10 bg-violet-600 border-violet-500 text-white shadow-md shadow-violet-500/20"
                       : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-250 hover:bg-slate-850/80"
@@ -117,7 +133,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
             </button>
           </nav>
         </div>
-      </div>
+      )}
     </div>
   );
 }
