@@ -38,6 +38,10 @@ export default function Dashboard() {
   const [activeFilename, setActiveFilename] = useState<string>("sample.jpg");
   const [uploading, setUploading] = useState(false);
 
+  // Entry Mode States
+  const [entryMode, setEntryMode] = useState<"ocr" | "manual">("ocr");
+  const [isManualWorkspace, setIsManualWorkspace] = useState(false);
+
   // Shipment Metadata Form State
   const [metadata, setMetadata] = useState({
     date: "",
@@ -489,6 +493,7 @@ export default function Dashboard() {
       setActiveFilename("sample.jpg");
       setSaveResult(null);
       setErrorMsg("");
+      setIsManualWorkspace(false);
       setMetadata({
         date: "",
         ourInvoiceNumber: "",
@@ -587,9 +592,9 @@ export default function Dashboard() {
   };
 
   // ========================================================
-  // RENDER WORKSPACE: SPLIT SCREEN REVIEW WORKSPACE
+  // RENDER WORKSPACE: SPLIT SCREEN REVIEW WORKSPACE OR MANUAL TABLE
   // ========================================================
-  if (uploadFile !== null) {
+  if (uploadFile !== null || isManualWorkspace) {
     return (
       <AdminLayout>
         <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-[#070b13]">
@@ -793,9 +798,10 @@ export default function Dashboard() {
         )}
 
         {/* Split Screen Workspace Area */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
-          {/* Left Panel: Dynamic Register Image Viewport */}
-          <section className="flex flex-col border-r border-slate-800/80 bg-[#080d16] h-full overflow-hidden">
+        <div className={`flex-1 grid grid-cols-1 ${entryMode === "ocr" ? "lg:grid-cols-2" : "lg:grid-cols-1"} overflow-hidden`}>
+          {/* Left Panel: Dynamic Register Image Viewport (OCR Mode Only) */}
+          {entryMode === "ocr" && (
+            <section className="flex flex-col border-r border-slate-800/80 bg-[#080d16] h-full overflow-hidden">
             <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/50 flex justify-between items-center text-xs font-semibold text-slate-400 select-none">
               <span>Register Image Viewport</span>
               <div className="flex items-center gap-1 text-[10px] text-slate-500 font-normal">
@@ -856,6 +862,7 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
+          )}
 
           {/* Right Panel: Editable Shipment Table */}
           <section className="flex flex-col bg-[#0b101c] h-full overflow-hidden">
@@ -982,13 +989,34 @@ export default function Dashboard() {
     <AdminLayout>
       <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto select-none">
       {/* Header Banner */}
-      <header className="flex justify-between items-center pb-6 border-b border-slate-800">
+      <header className="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-slate-800 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
             TMS transOS
           </h1> 
-          <p className="text-slate-400 mt-1 font-medium">OCR Shipment Extraction Console</p>
+          <p className="text-slate-400 mt-1 font-medium">Shipment Entry Console</p>
         </div>
+        
+        {/* Entry Mode Toggle */}
+        <div className="flex bg-slate-900/60 border border-slate-800 rounded-xl p-1 shadow-lg backdrop-blur-md">
+          <button
+            onClick={() => setEntryMode("ocr")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              entryMode === "ocr" ? "bg-violet-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <span>📷</span> OCR Upload
+          </button>
+          <button
+            onClick={() => setEntryMode("manual")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              entryMode === "manual" ? "bg-violet-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <span>✍️</span> Manual Entry
+          </button>
+        </div>
+
         <div className="flex items-center gap-3">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
@@ -1099,90 +1127,124 @@ export default function Dashboard() {
         </section>
 
         {/* Step 2 & 3 Card */}
-        <section className="lg:col-span-1 bg-slate-900/60 backdrop-blur-md border border-slate-850 p-6 rounded-2xl flex flex-col justify-between shadow-2xl">
-          <div>
-            <h2 className="text-lg font-bold text-slate-200 mb-2 flex items-center gap-2">
-              <span className="flex items-center justify-center h-6 w-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold border border-violet-500/25">2</span>
-              <span>Upload Image & Run OCR</span>
-            </h2>
-            <p className="text-xs text-slate-400 mb-6">Select register sheet and extract data entries.</p>
-                  {/* Upload panel */}
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-xl p-5 mb-5 text-center cursor-pointer transition-all hover:bg-slate-850/50 flex flex-col items-center justify-center border-slate-800 hover:border-slate-700 bg-slate-950/40"
-            >
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden" 
-              />
-              {uploading ? (
-                <div className="flex flex-col items-center">
-                  <svg className="animate-spin h-6 w-6 text-violet-400 mb-2" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <p className="text-xs text-slate-400 font-semibold">Uploading image...</p>
+        {entryMode === "ocr" ? (
+          <section className="lg:col-span-1 bg-slate-900/60 backdrop-blur-md border border-slate-850 p-6 rounded-2xl flex flex-col justify-between shadow-2xl">
+            <div>
+              <h2 className="text-lg font-bold text-slate-200 mb-2 flex items-center gap-2">
+                <span className="flex items-center justify-center h-6 w-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold border border-violet-500/25">2</span>
+                <span>Upload Image & Run OCR</span>
+              </h2>
+              <p className="text-xs text-slate-400 mb-6">Select register sheet and extract data entries.</p>
+                    {/* Upload panel */}
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-xl p-5 mb-5 text-center cursor-pointer transition-all hover:bg-slate-850/50 flex flex-col items-center justify-center border-slate-800 hover:border-slate-700 bg-slate-950/40"
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden" 
+                />
+                {uploading ? (
+                  <div className="flex flex-col items-center">
+                    <svg className="animate-spin h-6 w-6 text-violet-400 mb-2" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <p className="text-xs text-slate-400 font-semibold">Uploading image...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <svg className="h-6 w-6 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <p className="text-xs text-slate-300 font-semibold">Upload Register Image</p>
+                    <span className="text-[10px] text-slate-500 mt-1">Select PNG, JPG, or JPEG</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              {/* Step 3 Trigger */}
+              <button
+                onClick={() => handleRunOCR()}
+                disabled={loading || uploading || !uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && isBranchSelectionValid)}
+                className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Processing OCR...</span>
+                  </>
+                ) : (
+                  <span>Run OCR Pipeline</span>
+                )}
+              </button>
+
+              {/* Validation warning */}
+              {(!uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "")) && (
+                <p className="text-[10px] text-slate-500 mt-3 text-center leading-normal">
+                  {!uploadFile && !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "")
+                    ? "Please complete all fields (Step 1) and upload an image (Step 2)."
+                    : !uploadFile
+                    ? "Please upload a register sheet image (Step 2)."
+                    : "Please fill in all Shipment Information fields (Step 1)."}
+                </p>
+              )}
+
+              {loading && (
+                <div className="mt-5 p-3.5 bg-slate-950/80 rounded-lg border border-slate-800 text-center animate-pulse">
+                  <p className="text-[11px] text-violet-400 font-mono">{loadingStep}</p>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <svg className="h-6 w-6 text-slate-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  <p className="text-xs text-slate-300 font-semibold">Upload Register Image</p>
-                  <span className="text-[10px] text-slate-500 mt-1">Select PNG, JPG, or JPEG</span>
+              )}
+
+              {errorMsg && (
+                <div className="mt-5 p-3.5 bg-red-950/40 rounded-lg border border-red-900/50 text-red-400 text-xs">
+                  <p className="font-semibold">Pipeline Error:</p>
+                  <p className="text-[10px] font-mono mt-1 leading-relaxed">{errorMsg}</p>
                 </div>
               )}
             </div>
-          </div>
+          </section>
+        ) : (
+          <section className="lg:col-span-1 bg-slate-900/60 backdrop-blur-md border border-slate-850 p-6 rounded-2xl flex flex-col justify-between shadow-2xl">
+            <div>
+              <h2 className="text-lg font-bold text-slate-200 mb-2 flex items-center gap-2">
+                <span className="flex items-center justify-center h-6 w-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold border border-violet-500/25">2</span>
+                <span>Start Manual Entry</span>
+              </h2>
+              <p className="text-xs text-slate-400 mb-6">Create empty rows and enter shipments manually.</p>
+            </div>
+            
+            <div>
+              <button
+                onClick={() => {
+                  setIsManualWorkspace(true);
+                  handleAddRow();
+                }}
+                disabled={!(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && isBranchSelectionValid)}
+                className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>+ Add Shipment Row</span>
+              </button>
 
-          <div>
-            {/* Step 3 Trigger */}
-            <button
-              onClick={() => handleRunOCR()}
-              disabled={loading || uploading || !uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && isBranchSelectionValid)}
-              className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Processing OCR...</span>
-                </>
-              ) : (
-                <span>Run OCR Pipeline</span>
+              {!(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "") && (
+                <p className="text-[10px] text-slate-500 mt-3 text-center leading-normal">
+                  Please fill in all Shipment Information fields (Step 1) before adding a row.
+                </p>
               )}
-            </button>
-
-            {/* Validation warning */}
-            {(!uploadFile || !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "")) && (
-              <p className="text-[10px] text-slate-500 mt-3 text-center leading-normal">
-                {!uploadFile && !(metadata.date.trim() !== "" && metadata.ourInvoiceNumber.trim() !== "" && metadata.vehicleNumber.trim() !== "" && metadata.fromAmtBranch.trim() !== "" && metadata.toAmtBranch.trim() !== "")
-                  ? "Please complete all fields (Step 1) and upload an image (Step 2)."
-                  : !uploadFile
-                  ? "Please upload a register sheet image (Step 2)."
-                  : "Please fill in all Shipment Information fields (Step 1)."}
-              </p>
-            )}
-
-            {loading && (
-              <div className="mt-5 p-3.5 bg-slate-950/80 rounded-lg border border-slate-800 text-center animate-pulse">
-                <p className="text-[11px] text-violet-400 font-mono">{loadingStep}</p>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="mt-5 p-3.5 bg-red-950/40 rounded-lg border border-red-900/50 text-red-400 text-xs">
-                <p className="font-semibold">Pipeline Error:</p>
-                <p className="text-[10px] font-mono mt-1 leading-relaxed">{errorMsg}</p>
-              </div>
-            )}
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
       </main>
       </div>
     </AdminLayout>

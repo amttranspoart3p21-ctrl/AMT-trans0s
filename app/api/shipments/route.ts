@@ -112,8 +112,8 @@ export async function POST(request: Request) {
     // Map the simplified frontend shipment structure to the backend's expected Shipment fields
     const formattedShipments: Shipment[] = shipments.map((s: any) => {
       // Preserve quantity as a string exactly as it appears
-      let quantity = "1";
-      if (s.quantity !== null && s.quantity !== undefined && s.quantity !== "") {
+      let quantity = "";
+      if (s.quantity !== null && s.quantity !== undefined) {
         quantity = String(s.quantity);
       }
 
@@ -126,17 +126,17 @@ export async function POST(request: Request) {
         paymentStatus = "Free";
       }
 
-      // Build database-aligned Shipment object with sensible default fields
+      // Build database-aligned Shipment object without forcing mock data for empty fields
       const shipmentDate = s.date || now.toISOString().split("T")[0]; // YYYY-MM-DD format
 
       return {
         date: shipmentDate,
-        vehicleNumber: s.vehicleNumber || "MOCK-1234",
-        fromAmtBranch: s.fromAmtBranch || "HO",
+        vehicleNumber: s.vehicleNumber || "",
+        fromAmtBranch: s.fromAmtBranch || "",
         fromCompany: s.fromCompany || "",
-        toAmtBranch: s.toAmtBranch || "BO",
+        toAmtBranch: s.toAmtBranch || "",
         toCompany: s.toCompany || "",
-        packageType: s.packageType || "Box",
+        packageType: s.packageType || "",
         quantity: quantity,
         ourInvoiceNumber: s.ourInvoiceNumber || "",
         customerInvoiceNumber: s.customerInvoice || "",
