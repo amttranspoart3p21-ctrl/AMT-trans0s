@@ -59,8 +59,9 @@ interface ShipmentWorkspaceProps {
   defaultFilters?: Partial<IFilters>;
 }
 
-const calculateQuantity = (qty: string | null | undefined): number => {
+const calculateQuantity = (qty: string | number | null | undefined): number => {
   if (qty === null || qty === undefined) return 1;
+  if (typeof qty === "number") return qty;
   const clean = qty.trim();
   if (clean === "") return 1;
   const pattern = /^\d+(?:\s*[xX*×]\s*\d+)*$/;
@@ -76,6 +77,93 @@ const calculateQuantity = (qty: string | null | undefined): number => {
   }
   return product;
 };
+
+function performCompanyRouteRateLookupAndLog(
+  label: string,
+  companyRates: any[],
+  expectedCompanyId: string,
+  expectedCompanyName: string,
+  expectedFromBranchId: string,
+  expectedFromBranchName: string,
+  expectedToBranchId: string,
+  expectedToBranchName: string,
+  expectedPackageId: string,
+  expectedPackageName: string
+) {
+  const fromBranchKey = expectedFromBranchName.trim().toLowerCase();
+  const toBranchKey = expectedToBranchName.trim().toLowerCase();
+  const packageKey = expectedPackageName.trim().toLowerCase();
+
+  console.log(`%c\n========================================`, "color: #3b82f6; font-weight: bold;");
+  console.log(`%c${label} LOOKUP`, "color: #3b82f6; font-weight: bold; font-size: 1.1em;");
+  console.log(`%c========================================`, "color: #3b82f6; font-weight: bold;");
+  console.log(`Expected keys:`);
+  console.log(`- Company Name   : ${expectedCompanyName}`);
+  console.log(`- Company ID     : ${expectedCompanyId}`);
+  console.log(`- From Branch ID : ${expectedFromBranchId} (${expectedFromBranchName})`);
+  console.log(`- To Branch ID   : ${expectedToBranchId} (${expectedToBranchName})`);
+  console.log(`- Package ID     : ${expectedPackageId} (${expectedPackageName})`);
+
+  let matchedRate = null;
+  const candidates: any[] = [];
+
+  for (const c of companyRates) {
+    if (c.status !== "Active") continue;
+
+    // Check if company matches (case-insensitive)
+    const isCompanyMatch = c.companyId.toLowerCase() === expectedCompanyId.toLowerCase();
+    if (!isCompanyMatch) continue;
+
+    // Company matched, this is a candidate!
+    const fromBranchMatch = expectedFromBranchId ? (c.fromBranchId === expectedFromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey;
+    const toBranchMatch = expectedToBranchId ? (c.toBranchId === expectedToBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey;
+    const packageMatch = expectedPackageId ? (c.packageId === expectedPackageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey;
+
+    const isMatch = fromBranchMatch && toBranchMatch && packageMatch;
+
+    candidates.push({
+      rate: c,
+      checks: {
+        companyId: true,
+        fromBranch: fromBranchMatch,
+        toBranch: toBranchMatch,
+        package: packageMatch
+      }
+    });
+
+    if (isMatch) {
+      matchedRate = c;
+    }
+  }
+
+  // Print near-matches / candidates
+  if (candidates.length > 0) {
+    console.log(`\nCandidates (Company matched):`);
+    candidates.forEach((cand, idx) => {
+      const c = cand.rate;
+      const ch = cand.checks;
+      console.log(`Candidate #${idx + 1}:`);
+      console.log(`  Row Details: CompanyId=${c.companyId}, FromBranchId=${c.fromBranchId} (${c.fromBranchName}), ToBranchId=${c.toBranchId} (${c.toBranchName}), PackageId=${c.packageId} (${c.packageName})`);
+      console.log(`  Checks:`);
+      console.log(`    Company ID  : %c✅`, "color: green;");
+      console.log(`    From Branch : ${ch.fromBranch ? "%c✅" : "%c❌ (Expected: " + (expectedFromBranchId || "none") + "/" + expectedFromBranchName + ", Found: " + c.fromBranchId + "/" + c.fromBranchName + ")"}`, ch.fromBranch ? "color: green;" : "color: red;");
+      console.log(`    To Branch   : ${ch.toBranch ? "%c✅" : "%c❌ (Expected: " + (expectedToBranchId || "none") + "/" + expectedToBranchName + ", Found: " + c.toBranchId + "/" + c.toBranchName + ")"}`, ch.toBranch ? "color: green;" : "color: red;");
+      console.log(`    Package     : ${ch.package ? "%c✅" : "%c❌ (Expected: " + (expectedPackageId || "none") + "/" + expectedPackageName + ", Found: " + c.packageId + "/" + c.packageName + ")"}`, ch.package ? "color: green;" : "color: red;");
+    });
+  } else {
+    console.log(`\nNo candidates found for Company ID ${expectedCompanyId} in active rates.`);
+  }
+
+  if (matchedRate) {
+    console.log(`%c\n✅ MATCH FOUND`, "color: green; font-weight: bold;");
+    console.log(`Rate Row:`, matchedRate);
+  } else {
+    console.log(`%c\n❌ NO MATCH`, "color: red; font-weight: bold;");
+  }
+  console.log(`========================================\n`);
+
+  return matchedRate;
+}
 
 export default function ShipmentWorkspace({
   title,
@@ -477,9 +565,7 @@ export default function ShipmentWorkspace({
       setSortOrder("desc");
     }
     setPage(1);
-  };
-
-  // Replicate backend pricing calculation locally in browser
+  };  // Replicate backend pricing calculation locally in browser
   const calculatePricingLocally = (shipment: ShipmentRecord) => {
     const fromBranchKey = (shipment.fromAmtBranch || "").trim().toLowerCase();
     const toBranchKey = (shipment.toAmtBranch || "").trim().toLowerCase();
@@ -513,9 +599,9 @@ export default function ShipmentWorkspace({
     const packageId = packageObj?.packageId || "";
     const packageExists = !!packageObj && packageObj.status === "Active";
 
-    if (!packageExists) {
-      return { transportRate: null, pickupCharge: null, deliveryCharge: null, pricePerPiece: null };
-    }
+    const paymentCompanyResolved = paymentCompanyDetails.companyName;
+    const fromCompanyResolved = fromCompanyDetails.companyName;
+    const toCompanyResolved = toCompanyDetails.companyName;
 
     const fromBranchObj = branches.find(
       (b) => b.branchName?.trim().toLowerCase() === fromBranchKey
@@ -527,101 +613,90 @@ export default function ShipmentWorkspace({
     );
     const toBranchId = toBranchObj?.branchId || "";
 
-    let transportRate: number | null = null;
+    let transportRate: number = 0;
     let pickupCharge = 0;
     let deliveryCharge = 0;
-    let isGlobalPackage = false;
 
-    // 1. Resolve Transport Rate
-    const matchedCompanyRate = companyRouteRates.find(
-      (c) =>
-        c.status === "Active" &&
-        c.companyId === paymentCompanyId &&
-        (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
-        (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
-        (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
-    );
+    let matchedCompanyRate = null;
+    let matchedFromCompanyRate = null;
+    let matchedToCompanyRate = null;
 
-    if (matchedCompanyRate) {
-      transportRate = matchedCompanyRate.transportRate;
-    } else {
-      const matchedGlobalRate = globalRouteRates.find(
-        (g) =>
-          g.status === "Active" &&
-          (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.trim().toLowerCase() === fromBranchKey) : g.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
-          (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.trim().toLowerCase() === toBranchKey) : g.toBranchName.trim().toLowerCase() === toBranchKey) &&
-          (packageId ? (g.packageId === packageId || g.packageName.trim().toLowerCase() === packageKey) : g.packageName.trim().toLowerCase() === packageKey)
+    if (packageExists) {
+      // 1. Resolve Transport Rate & Scope
+      matchedCompanyRate = performCompanyRouteRateLookupAndLog(
+        "TRANSPORT",
+        companyRouteRates,
+        paymentCompanyId,
+        paymentCompanyResolved,
+        fromBranchId,
+        shipment.fromAmtBranch || "",
+        toBranchId,
+        shipment.toAmtBranch || "",
+        packageId,
+        packageKey
       );
 
-      if (matchedGlobalRate) {
-        transportRate = matchedGlobalRate.rate;
-        isGlobalPackage = true;
-      }
-    }
-
-    let matchedFromCompanyRate;
-    let matchedToCompanyRate;
-
-    if (isGlobalPackage) {
-      pickupCharge = 0;
-      deliveryCharge = 0;
-    } else {
-      // 2. Resolve Pickup Charge (always belongs to Sender Company package)
-      if (shipment.pickupService === "Branch" || shipment.pickupService === "Free Home") {
-        pickupCharge = 0;
-      } else if (shipment.pickupService === "Home") {
-        matchedFromCompanyRate = companyRouteRates.find(
-          (c) =>
-            c.status === "Active" &&
-            c.companyId === fromCompanyId &&
-            (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
-            (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
-            (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
+      if (matchedCompanyRate) {
+        transportRate = matchedCompanyRate.transportRate;
+      } else {
+        const matchedGlobalRate = globalRouteRates.find(
+          (g) =>
+            g.status === "Active" &&
+            (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.trim().toLowerCase() === fromBranchKey) : g.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
+            (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.trim().toLowerCase() === toBranchKey) : g.toBranchName.trim().toLowerCase() === toBranchKey) &&
+            (packageId ? (g.packageId === packageId || g.packageName.trim().toLowerCase() === packageKey) : g.packageName.trim().toLowerCase() === packageKey)
         );
-        if (
-          matchedFromCompanyRate &&
-          typeof matchedFromCompanyRate.pickupCharge === "number" &&
-          !isNaN(matchedFromCompanyRate.pickupCharge)
-        ) {
-          pickupCharge = matchedFromCompanyRate.pickupCharge;
-        } else {
-          pickupCharge = 0;
+
+        if (matchedGlobalRate) {
+          transportRate = matchedGlobalRate.rate;
         }
       }
 
-      // 3. Resolve Delivery Charge (always belongs to Receiver Company package)
-      if (shipment.deliveryService === "Branch" || shipment.deliveryService === "Free Home") {
-        deliveryCharge = 0;
-      } else if (shipment.deliveryService === "Home") {
-        matchedToCompanyRate = companyRouteRates.find(
-          (c) =>
-            c.status === "Active" &&
-            c.companyId === toCompanyId &&
-            (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.trim().toLowerCase() === fromBranchKey) : c.fromBranchName.trim().toLowerCase() === fromBranchKey) &&
-            (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.trim().toLowerCase() === toBranchKey) : c.toBranchName.trim().toLowerCase() === toBranchKey) &&
-            (packageId ? (c.packageId === packageId || c.packageName.trim().toLowerCase() === packageKey) : c.packageName.trim().toLowerCase() === packageKey)
+      // 2. Resolve default database pickupCharge
+      if (shipment.pickupService === "Home") {
+        matchedFromCompanyRate = performCompanyRouteRateLookupAndLog(
+          "PICKUP",
+          companyRouteRates,
+          fromCompanyId,
+          fromCompanyResolved,
+          fromBranchId,
+          shipment.fromAmtBranch || "",
+          toBranchId,
+          shipment.toAmtBranch || "",
+          packageId,
+          packageKey
         );
-        if (
-          matchedToCompanyRate &&
-          typeof matchedToCompanyRate.deliveryCharge === "number" &&
-          !isNaN(matchedToCompanyRate.deliveryCharge)
-        ) {
-          deliveryCharge = matchedToCompanyRate.deliveryCharge;
-        } else {
-          deliveryCharge = 0;
-        }
+      }
+
+      // 3. Resolve default database deliveryCharge
+      if (shipment.deliveryService === "Home") {
+        matchedToCompanyRate = performCompanyRouteRateLookupAndLog(
+          "DELIVERY",
+          companyRouteRates,
+          toCompanyId,
+          toCompanyResolved,
+          fromBranchId,
+          shipment.fromAmtBranch || "",
+          toBranchId,
+          shipment.toAmtBranch || "",
+          packageId,
+          packageKey
+        );
       }
     }
 
-    console.log({
-      pickupChargeFromDB: matchedFromCompanyRate?.pickupCharge,
-      finalPickupChargeBeingSaved: pickupCharge
-    });
-
-    let pricePerPiece: number | null = null;
-    if (transportRate !== null) {
-      pricePerPiece = transportRate + pickupCharge + deliveryCharge;
+    if (matchedFromCompanyRate && typeof matchedFromCompanyRate.pickupCharge === "number" && !isNaN(matchedFromCompanyRate.pickupCharge)) {
+      pickupCharge = matchedFromCompanyRate.pickupCharge;
     }
+
+    if (matchedToCompanyRate && typeof matchedToCompanyRate.deliveryCharge === "number" && !isNaN(matchedToCompanyRate.deliveryCharge)) {
+      deliveryCharge = matchedToCompanyRate.deliveryCharge;
+    }
+
+    const tRate = (transportRate !== null && transportRate !== undefined && !isNaN(Number(transportRate))) ? Number(transportRate) : 0;
+    const pCharge = (pickupCharge !== null && pickupCharge !== undefined && !isNaN(Number(pickupCharge))) ? Number(pickupCharge) : 0;
+    const dCharge = (deliveryCharge !== null && deliveryCharge !== undefined && !isNaN(Number(deliveryCharge))) ? Number(deliveryCharge) : 0;
+    const pricePerPiece = tRate + pCharge + dCharge;
 
     return {
       transportRate,
@@ -687,7 +762,7 @@ export default function ShipmentWorkspace({
       }
     }
 
-    // 2. branch integrity logic
+    // 2. Branch integrity logic
     if ("fromAmtBranch" in updatedFields) {
       const value = currentRecord.fromAmtBranch;
       const branchObj = branches.find((b) => b.branchName?.trim().toLowerCase() === value?.trim().toLowerCase());
@@ -711,43 +786,6 @@ export default function ShipmentWorkspace({
       }
     }
 
-    // Check global package transition
-    const wasGlobal = isGlobalRoutePackage(
-      originalShipment.packageType,
-      originalShipment.fromAmtBranch,
-      originalShipment.toAmtBranch,
-      originalShipment.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      originalShipment.paymentReceivingBranch
-    );
-
-    const tempRecord = { ...currentRecord, ...autoFills };
-    const isNowGlobal = isGlobalRoutePackage(
-      tempRecord.packageType,
-      tempRecord.fromAmtBranch,
-      tempRecord.toAmtBranch,
-      tempRecord.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      tempRecord.paymentReceivingBranch
-    );
-
-    if (isNowGlobal && !wasGlobal) {
-      autoFills.pickupService = "Branch";
-      autoFills.deliveryService = "Branch";
-      autoFills.pickupCharge = 0;
-      autoFills.deliveryCharge = 0;
-      currentRecord.pickupService = "Branch";
-      currentRecord.deliveryService = "Branch";
-      currentRecord.pickupCharge = 0;
-      currentRecord.deliveryCharge = 0;
-    }
-
     // 3. Dynamic package validation logic
     if (
       "fromAmtBranch" in updatedFields ||
@@ -758,7 +796,6 @@ export default function ShipmentWorkspace({
     ) {
       const currentPkg = currentRecord.packageType?.trim();
       if (currentPkg && currentPkg.includes("(")) {
-        // If it is a company-specific rate package, verify if it is still valid
         const validOptions = getFilteredPackageOptions(
           currentRecord.fromAmtBranch,
           currentRecord.toAmtBranch,
@@ -777,54 +814,113 @@ export default function ShipmentWorkspace({
       }
     }
 
-    // 3. pricing trigger logic
-    const pricingTriggerFields = [
-      "fromAmtBranch",
-      "fromCompany",
-      "toAmtBranch",
-      "toCompany",
+    // Check pricing dependency changes:
+    const masterRateDependencies = [
       "packageType",
+      "fromAmtBranch",
+      "toAmtBranch",
       "paymentCompany",
       "paymentReceivingBranch",
-      "pickupService",
-      "deliveryService",
-      "quantity",
     ];
 
-    const hasPricingTrigger = pricingTriggerFields.some(
-      (field) => field in updatedFields || field in autoFills
+    const isMasterDependencyChanged = masterRateDependencies.some(
+      (dep) => dep in updatedFields || dep in autoFills
     );
 
-    if (hasPricingTrigger) {
+    if ("packageType" in updatedFields) {
+      autoFills.pickupService = "Branch";
+      autoFills.deliveryService = "Branch";
+      autoFills.pickupCharge = 0;
+      autoFills.deliveryCharge = 0;
+      currentRecord.pickupService = "Branch";
+      currentRecord.deliveryService = "Branch";
+      currentRecord.pickupCharge = 0;
+      currentRecord.deliveryCharge = 0;
+    }
+
+    console.log(`[applyRowUpdates] shipmentId=${originalShipment.shipmentId} updatedFields=${JSON.stringify(Object.keys(updatedFields))} isMasterDependencyChanged=${isMasterDependencyChanged}`);
+    console.log(`[applyRowUpdates] currentRecord.transportRate=${currentRecord.transportRate} pickupCharge=${currentRecord.pickupCharge} deliveryCharge=${currentRecord.deliveryCharge} pricePerPiece=${currentRecord.pricePerPiece}`);
+
+    if (isMasterDependencyChanged) {
       const calc = calculatePricingLocally(currentRecord);
+      autoFills.transportRate = calc.transportRate;
+      currentRecord.transportRate = calc.transportRate;
 
-      const isTransportRateManual = overrides.has("transportRate") || ("transportRate" in updatedFields);
-      const isPricePerPieceManual = overrides.has("pricePerPiece") || ("pricePerPiece" in updatedFields);
-
-      if (!isTransportRateManual) {
-        autoFills.transportRate = calc.transportRate;
-        currentRecord.transportRate = calc.transportRate;
-      }
-      
       autoFills.pickupCharge = calc.pickupCharge;
       currentRecord.pickupCharge = calc.pickupCharge;
-      
+
       autoFills.deliveryCharge = calc.deliveryCharge;
       currentRecord.deliveryCharge = calc.deliveryCharge;
 
-      if (!isPricePerPieceManual) {
-        autoFills.pricePerPiece = calc.pricePerPiece;
-        currentRecord.pricePerPiece = calc.pricePerPiece;
+      autoFills.pricePerPiece = calc.pricePerPiece;
+      currentRecord.pricePerPiece = calc.pricePerPiece;
+    } else {
+      if ("pickupService" in updatedFields) {
+        const svc = currentRecord.pickupService;
+        if (svc === "Branch" || svc === "Free Home" || !svc) {
+          autoFills.pickupCharge = 0;
+          currentRecord.pickupCharge = 0;
+        } else if (svc === "Home") {
+          const calc = calculatePricingLocally(currentRecord);
+          autoFills.pickupCharge = calc.pickupCharge;
+          currentRecord.pickupCharge = calc.pickupCharge;
+
+          if (calc.pickupCharge === 0) {
+            const shipmentId = originalShipment.shipmentId;
+            setTimeout(() => {
+              const el = document.getElementById(`cell-${shipmentId}-pickupCharge`);
+              if (el) {
+                el.focus();
+                if (el instanceof HTMLInputElement) el.select();
+              }
+            }, 50);
+          }
+        }
+      }
+
+      if ("deliveryService" in updatedFields) {
+        const svc = currentRecord.deliveryService;
+        if (svc === "Branch" || svc === "Free Home" || !svc) {
+          autoFills.deliveryCharge = 0;
+          currentRecord.deliveryCharge = 0;
+        } else if (svc === "Home") {
+          const calc = calculatePricingLocally(currentRecord);
+          autoFills.deliveryCharge = calc.deliveryCharge;
+          currentRecord.deliveryCharge = calc.deliveryCharge;
+
+          if (calc.deliveryCharge === 0) {
+            const shipmentId = originalShipment.shipmentId;
+            setTimeout(() => {
+              const el = document.getElementById(`cell-${shipmentId}-deliveryCharge`);
+              if (el) {
+                el.focus();
+                if (el instanceof HTMLInputElement) el.select();
+              }
+            }, 50);
+          }
+        }
+      }
+
+      if (
+        "transportRate" in updatedFields ||
+        "pickupCharge" in updatedFields ||
+        "deliveryCharge" in updatedFields ||
+        "pickupService" in updatedFields ||
+        "deliveryService" in updatedFields
+      ) {
+        const tRate = (currentRecord.transportRate !== null && currentRecord.transportRate !== undefined && !isNaN(Number(currentRecord.transportRate))) ? Number(currentRecord.transportRate) : 0;
+        const pCharge = (currentRecord.pickupCharge !== null && currentRecord.pickupCharge !== undefined && !isNaN(Number(currentRecord.pickupCharge))) ? Number(currentRecord.pickupCharge) : 0;
+        const dCharge = (currentRecord.deliveryCharge !== null && currentRecord.deliveryCharge !== undefined && !isNaN(Number(currentRecord.deliveryCharge))) ? Number(currentRecord.deliveryCharge) : 0;
+        const ppp = tRate + pCharge + dCharge;
+        console.log(`[applyRowUpdates PPP CALC] tRate=${tRate} (raw=${currentRecord.transportRate}) + pCharge=${pCharge} (raw=${currentRecord.pickupCharge}) + dCharge=${dCharge} (raw=${currentRecord.deliveryCharge}) = ppp=${ppp}`);
+        autoFills.pricePerPiece = ppp;
+        currentRecord.pricePerPiece = ppp;
       }
     }
 
-    // 4. total amount logic
-    if (currentRecord.pricePerPiece !== null && currentRecord.pricePerPiece !== undefined) {
-      const qty = calculateQuantity(currentRecord.quantity);
-      autoFills.totalAmount = qty * currentRecord.pricePerPiece;
-    } else {
-      autoFills.totalAmount = null;
-    }
+    const pricePerPieceVal = (currentRecord.pricePerPiece !== null && currentRecord.pricePerPiece !== undefined && !isNaN(Number(currentRecord.pricePerPiece))) ? Number(currentRecord.pricePerPiece) : 0;
+    const qty = calculateQuantity(currentRecord.quantity);
+    autoFills.totalAmount = qty * pricePerPieceVal;
     currentRecord.totalAmount = autoFills.totalAmount;
 
     return {
@@ -904,6 +1000,21 @@ export default function ShipmentWorkspace({
     });
   };
 
+  const logPricingDebug = (label: string, s: Partial<ShipmentRecord>) => {
+    console.log(`========== [PRICING DEBUG: ${label}] ==========`);
+    console.log("Shipment ID     :", s.shipmentId);
+    console.log("Package         :", s.packageType);
+    console.log("Transport Rate  :", s.transportRate);
+    console.log("Pickup Service  :", s.pickupService);
+    console.log("Pickup Charge   :", s.pickupCharge);
+    console.log("Delivery Service:", s.deliveryService);
+    console.log("Delivery Charge :", s.deliveryCharge);
+    console.log("Price Per Piece :", s.pricePerPiece);
+    console.log("Quantity        :", s.quantity);
+    console.log("Total Amount    :", s.totalAmount);
+    console.log("===============================================");
+  };
+
   // Cell Change Handler (Runs Smart Auto-Fill & Business Rules locally)
   const handleCellChange = (shipmentId: string, field: keyof ShipmentRecord, value: any) => {
     pushToUndo(shipments, editedRows, manualOverrides);
@@ -914,154 +1025,13 @@ export default function ShipmentWorkspace({
     });
 
     const originalRecord = shipments.find((s) => s.shipmentId === shipmentId)!;
-    const currentRecord = { ...originalRecord, [field]: value };
-    const autoFills: Partial<ShipmentRecord> = {};
+    logPricingDebug(`Cell Change Start (Field: ${String(field)} = ${value})`, originalRecord);
 
-    if (field === "paymentReceivingBranch") {
-      // Clear manual override for paymentCompany since payer branch type has changed
-      setManualOverrides((prev) => {
-        const existing = prev[shipmentId] ? new Set(prev[shipmentId]) : new Set<string>();
-        existing.delete("paymentCompany");
-        return { ...prev, [shipmentId]: existing };
-      });
+    const existingOverrides = manualOverrides[shipmentId] ? new Set(manualOverrides[shipmentId]) : new Set<string>();
+    existingOverrides.add(field);
 
-      if (value === "From Company" && currentRecord.fromCompany) {
-        const resolved = resolveCompanyDetails(currentRecord.fromCompany, currentRecord.fromAmtBranch, companies);
-        autoFills.paymentCompany = resolved.companyName;
-      } else if (value === "To Company" && currentRecord.toCompany) {
-        const resolved = resolveCompanyDetails(currentRecord.toCompany, currentRecord.toAmtBranch, companies);
-        autoFills.paymentCompany = resolved.companyName;
-      }
-    }
-
-    if (field === "fromCompany" && currentRecord.paymentReceivingBranch === "From Company") {
-      if (!manualOverrides[shipmentId]?.has("paymentCompany")) {
-        const resolved = resolveCompanyDetails(value, currentRecord.fromAmtBranch, companies);
-        autoFills.paymentCompany = resolved.companyName;
-      }
-    }
-    if (field === "toCompany" && currentRecord.paymentReceivingBranch === "To Company") {
-      if (!manualOverrides[shipmentId]?.has("paymentCompany")) {
-        const resolved = resolveCompanyDetails(value, currentRecord.toAmtBranch, companies);
-        autoFills.paymentCompany = resolved.companyName;
-      }
-    }
-
-    if (field === "fromAmtBranch") {
-      const validFromCompanies = companies.filter((c) => c.branchName === value).map((c) => c.companyName);
-      if (currentRecord.fromCompany && !validFromCompanies.includes(currentRecord.fromCompany)) {
-        autoFills.fromCompany = "";
-      }
-    }
-    if (field === "toAmtBranch") {
-      const validToCompanies = companies.filter((c) => c.branchName === value).map((c) => c.companyName);
-      if (currentRecord.toCompany && !validToCompanies.includes(currentRecord.toCompany)) {
-        autoFills.toCompany = "";
-      }
-    }
-
-    // Check global package transition
-    const wasGlobal = isGlobalRoutePackage(
-      originalRecord.packageType,
-      originalRecord.fromAmtBranch,
-      originalRecord.toAmtBranch,
-      originalRecord.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      originalRecord.paymentReceivingBranch
-    );
-
-    const tempMerged = { ...currentRecord, ...autoFills };
-    const isNowGlobal = isGlobalRoutePackage(
-      tempMerged.packageType,
-      tempMerged.fromAmtBranch,
-      tempMerged.toAmtBranch,
-      tempMerged.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      tempMerged.paymentReceivingBranch
-    );
-
-    if (isNowGlobal && !wasGlobal) {
-      autoFills.pickupService = "Branch";
-      autoFills.deliveryService = "Branch";
-      autoFills.pickupCharge = 0;
-      autoFills.deliveryCharge = 0;
-    }
-
-    // Validate package list and clear if no longer valid
-    const tempRecord = { ...currentRecord, ...autoFills };
-    if (
-      field === "fromAmtBranch" ||
-      field === "toAmtBranch" ||
-      field === "paymentCompany" ||
-      field === "paymentReceivingBranch" ||
-      ("paymentCompany" in autoFills)
-    ) {
-      const currentPkg = tempRecord.packageType?.trim();
-      if (currentPkg && currentPkg.includes("(")) {
-        const validOptions = getFilteredPackageOptions(
-          tempRecord.fromAmtBranch,
-          tempRecord.toAmtBranch,
-          tempRecord.paymentCompany,
-          companyRouteRates,
-          globalRouteRates,
-          companies,
-          branches,
-          tempRecord.paymentReceivingBranch
-        );
-        const validValues = validOptions.map(opt => opt.value.toLowerCase().trim());
-        if (!validValues.includes(currentPkg.toLowerCase()) && field !== "packageType") {
-          autoFills.packageType = "";
-        }
-      }
-    }
-
-    const finalRecord = { ...currentRecord, ...autoFills };
-
-    const pricingTriggerFields = [
-      "fromAmtBranch",
-      "fromCompany",
-      "toAmtBranch",
-      "toCompany",
-      "packageType",
-      "paymentCompany",
-      "paymentReceivingBranch",
-      "pickupService",
-      "deliveryService",
-      "quantity",
-    ];
-
-    if (pricingTriggerFields.includes(field) || Object.keys(autoFills).some(k => pricingTriggerFields.includes(k))) {
-      const calc = calculatePricingLocally(finalRecord);
-
-      if (!manualOverrides[shipmentId]?.has("transportRate")) {
-        autoFills.transportRate = calc.transportRate;
-        finalRecord.transportRate = calc.transportRate;
-      }
-      
-      autoFills.pickupCharge = calc.pickupCharge;
-      finalRecord.pickupCharge = calc.pickupCharge;
-      
-      autoFills.deliveryCharge = calc.deliveryCharge;
-      finalRecord.deliveryCharge = calc.deliveryCharge;
-
-      if (!manualOverrides[shipmentId]?.has("pricePerPiece")) {
-        autoFills.pricePerPiece = calc.pricePerPiece;
-        finalRecord.pricePerPiece = calc.pricePerPiece;
-      }
-    }
-
-    if (finalRecord.pricePerPiece !== null && finalRecord.pricePerPiece !== undefined) {
-      const qty = calculateQuantity(finalRecord.quantity);
-      autoFills.totalAmount = qty * finalRecord.pricePerPiece;
-    } else {
-      autoFills.totalAmount = null;
-    }
+    const { updatedShipment, autoFills } = applyRowUpdates(originalRecord, { [field]: value }, existingOverrides);
+    logPricingDebug(`After applyRowUpdates (Field: ${String(field)})`, updatedShipment);
 
     const filledKeys = Object.keys(autoFills).filter(
       (k) => autoFills[k as keyof ShipmentRecord] !== originalRecord[k as keyof ShipmentRecord]
@@ -1071,22 +1041,21 @@ export default function ShipmentWorkspace({
     }
 
     setShipments((prev) =>
-      prev.map((s) => (s.shipmentId === shipmentId ? { ...s, ...autoFills, [field]: value } : s))
+      prev.map((s) => (s.shipmentId === shipmentId ? updatedShipment : s))
     );
 
     setEditedRows((prev) => {
       const existing = prev[shipmentId];
       const original = existing ? existing.original : { ...originalRecord };
-      const current = existing ? { ...existing.current } : { ...originalRecord };
-
       return {
         ...prev,
         [shipmentId]: {
           original,
-          current: { ...current, ...autoFills, [field]: value },
+          current: updatedShipment,
         },
       };
     });
+    logPricingDebug(`After setState (Field: ${String(field)})`, updatedShipment);
   };
 
   // Discard spreadsheet changes
@@ -1129,6 +1098,10 @@ export default function ShipmentWorkspace({
         return { shipmentId: id, updates };
       }).filter((item) => Object.keys(item.updates).length > 0);
 
+      console.log("========== [PRICING DEBUG: Before Save Payload] ==========");
+      console.log("Payload:", JSON.stringify(rowsPayload, null, 2));
+      console.log("==========================================================");
+
       if (rowsPayload.length > 0) {
         const res = await fetch("/api/shipments/bulk", {
           method: "PUT",
@@ -1140,6 +1113,11 @@ export default function ShipmentWorkspace({
           const errJson = await res.json();
           throw new Error(errJson.message || "Failed to update shipments.");
         }
+
+        const resData = await res.json();
+        console.log("========== [PRICING DEBUG: After Backend Response] ==========");
+        console.log("Response Data:", JSON.stringify(resData, null, 2));
+        console.log("=============================================================");
       }
 
       triggerToast(`Successfully saved updates to ${dirtyIds.length} shipments.`);

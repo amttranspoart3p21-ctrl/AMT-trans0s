@@ -95,3 +95,22 @@ export function resolveCompanyDetails(
 
   return { companyId: "", companyName: name.trim() };
 }
+
+export function calculateQuantity(quantityVal: string | number | undefined | null): number {
+  if (quantityVal === undefined || quantityVal === null || quantityVal === "") return 0;
+  if (typeof quantityVal === "number") return isNaN(quantityVal) ? 0 : quantityVal;
+
+  const str = String(quantityVal).trim();
+  if (!str) return 0;
+
+  // Handle formulas like 10*20 or 10x20
+  if (str.includes("*") || str.includes("x") || str.includes("X") || str.includes("×")) {
+    const parts = str.split(/[*xX×]/).map((p) => parseFloat(p.trim())).filter((n) => !isNaN(n));
+    if (parts.length > 0) {
+      return parts.reduce((acc, curr) => acc * curr, 1);
+    }
+  }
+
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? 0 : parsed;
+}

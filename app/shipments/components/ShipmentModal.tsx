@@ -9,7 +9,7 @@ import Button from "@/components/ui/Button";
 import type { CompanyRouteRate } from "@/types/company-route-rate";
 import type { GlobalRouteRate } from "@/types/global-route-rate";
 import { getFilteredPackageOptions, buildPackageOptionsList, getPackageBadgeStatus, isGlobalRoutePackage } from "@/utils/package-filter";
-import { resolveCompanyDetails } from "@/utils/shipment-shared";
+import { resolveCompanyDetails, calculateQuantity } from "@/utils/shipment-shared";
 
 interface ShipmentModalProps {
   isOpen: boolean;
@@ -75,7 +75,6 @@ export default function ShipmentModal({
     const autoFills: Partial<ShipmentRecord> = {};
 
     if (field === "paymentReceivingBranch") {
-      // Clear manual override for paymentCompany since payer branch type has changed
       nextOverrides.delete("paymentCompany");
       setModalOverrides(nextOverrides);
 
@@ -116,39 +115,6 @@ export default function ShipmentModal({
       }
     }
 
-    // Check global package transition
-    const wasGlobal = isGlobalRoutePackage(
-      formData.packageType,
-      formData.fromAmtBranch,
-      formData.toAmtBranch,
-      formData.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      formData.paymentReceivingBranch
-    );
-    
-    const tempUpdated = { ...updated, ...autoFills };
-    const isNowGlobal = isGlobalRoutePackage(
-      tempUpdated.packageType,
-      tempUpdated.fromAmtBranch,
-      tempUpdated.toAmtBranch,
-      tempUpdated.paymentCompany,
-      companyRouteRates,
-      globalRouteRates,
-      companies,
-      branches,
-      tempUpdated.paymentReceivingBranch
-    );
-
-    if (isNowGlobal && !wasGlobal) {
-      autoFills.pickupService = "Branch";
-      autoFills.deliveryService = "Branch";
-      autoFills.pickupCharge = 0;
-      autoFills.deliveryCharge = 0;
-    }
-
     updated = { ...updated, ...autoFills };
 
     // Validate package list and clear if no longer valid
@@ -178,41 +144,88 @@ export default function ShipmentModal({
       }
     }
 
-    // Recalculate local pricing if pricing fields change
-    const pricingTriggerFields = [
-      "fromAmtBranch",
-      "fromCompany",
-      "toAmtBranch",
-      "toCompany",
+    // Check pricing dependency changes:
+    const masterRateDependencies = [
       "packageType",
+      "fromAmtBranch",
+      "toAmtBranch",
       "paymentCompany",
       "paymentReceivingBranch",
-      "pickupService",
-      "deliveryService",
-      "quantity",
     ];
 
-    if (pricingTriggerFields.includes(String(field)) || Object.keys(autoFills).some(k => pricingTriggerFields.includes(k))) {
-      const calc = calculatePricingLocally(updated);
+    const isMasterDependencyChanged = masterRateDependencies.includes(String(field)) || Object.keys(autoFills).some(k => masterRateDependencies.includes(k));
 
-      if (!nextOverrides.has("transportRate")) {
-        updated.transportRate = calc.transportRate;
-      }
+    if (field === "packageType") {
+      updated.pickupService = "Branch";
+      updated.deliveryService = "Branch";
+      updated.pickupCharge = 0;
+      updated.deliveryCharge = 0;
+    }
+
+    if (isMasterDependencyChanged) {
+      const calc = calculatePricingLocally(updated);
+      updated.transportRate = calc.transportRate;
       updated.pickupCharge = calc.pickupCharge;
       updated.deliveryCharge = calc.deliveryCharge;
+      updated.pricePerPiece = calc.pricePerPiece;
+    } else {
+      if (field === "pickupService") {
+        const svc = updated.pickupService;
+        if (svc === "Branch" || svc === "Free Home" || !svc) {
+          updated.pickupCharge = 0;
+        } else if (svc === "Home") {
+          const calc = calculatePricingLocally(updated);
+          updated.pickupCharge = calc.pickupCharge;
 
-      if (!nextOverrides.has("pricePerPiece")) {
-        updated.pricePerPiece = calc.pricePerPiece;
+          if (calc.pickupCharge === 0) {
+            setTimeout(() => {
+              const el = document.getElementById("modal-pickupCharge");
+              if (el) {
+                el.focus();
+                if (el instanceof HTMLInputElement) el.select();
+              }
+            }, 50);
+          }
+        }
+      }
+
+      if (field === "deliveryService") {
+        const svc = updated.deliveryService;
+        if (svc === "Branch" || svc === "Free Home" || !svc) {
+          updated.deliveryCharge = 0;
+        } else if (svc === "Home") {
+          const calc = calculatePricingLocally(updated);
+          updated.deliveryCharge = calc.deliveryCharge;
+
+          if (calc.deliveryCharge === 0) {
+            setTimeout(() => {
+              const el = document.getElementById("modal-deliveryCharge");
+              if (el) {
+                el.focus();
+                if (el instanceof HTMLInputElement) el.select();
+              }
+            }, 50);
+          }
+        }
+      }
+
+      if (
+        field === "transportRate" ||
+        field === "pickupCharge" ||
+        field === "deliveryCharge" ||
+        field === "pickupService" ||
+        field === "deliveryService"
+      ) {
+        const tRate = (updated.transportRate !== null && updated.transportRate !== undefined && !isNaN(Number(updated.transportRate))) ? Number(updated.transportRate) : 0;
+        const pCharge = (updated.pickupCharge !== null && updated.pickupCharge !== undefined && !isNaN(Number(updated.pickupCharge))) ? Number(updated.pickupCharge) : 0;
+        const dCharge = (updated.deliveryCharge !== null && updated.deliveryCharge !== undefined && !isNaN(Number(updated.deliveryCharge))) ? Number(updated.deliveryCharge) : 0;
+        updated.pricePerPiece = tRate + pCharge + dCharge;
       }
     }
 
-    // Recalculate total amount
-    if (updated.pricePerPiece !== null && updated.pricePerPiece !== undefined) {
-      const qty = parseInt(String(updated.quantity || 0), 10);
-      updated.totalAmount = qty * updated.pricePerPiece;
-    } else {
-      updated.totalAmount = null;
-    }
+    const pricePerPieceVal = (updated.pricePerPiece !== null && updated.pricePerPiece !== undefined && !isNaN(Number(updated.pricePerPiece))) ? Number(updated.pricePerPiece) : 0;
+    const qty = calculateQuantity(updated.quantity);
+    updated.totalAmount = qty * pricePerPieceVal;
 
     setFormData(updated);
   };
@@ -439,7 +452,6 @@ export default function ShipmentModal({
             <SearchableSelect
               value={formData.pickupService || "Branch"}
               onChange={(val) => handleFieldChange("pickupService", val)}
-              disabled={isGlobal}
               options={[
                 { value: "Branch", label: "Branch" },
                 { value: "Home", label: "Home Pickup" },
@@ -516,7 +528,6 @@ export default function ShipmentModal({
             <SearchableSelect
               value={formData.deliveryService || "Branch"}
               onChange={(val) => handleFieldChange("deliveryService", val)}
-              disabled={isGlobal}
               options={[
                 { value: "Branch", label: "Branch" },
                 { value: "Home", label: "Home Delivery" },
@@ -581,13 +592,45 @@ export default function ShipmentModal({
         {/* Pickup Charge */}
         <div>
           <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5">Pickup Charge</label>
-          <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold">{formData.pickupCharge ?? 0}</div>
+          {isEdit ? (
+            <input
+              id="modal-pickupCharge"
+              type="number"
+              value={formData.pickupCharge === null || formData.pickupCharge === undefined ? "" : formData.pickupCharge}
+              disabled={formData.pickupService !== "Home"}
+              onChange={(e) => handleFieldChange("pickupCharge", e.target.value === "" ? null : Number(e.target.value))}
+              placeholder="0"
+              className={`w-full border rounded-xl px-3 py-2 text-xs outline-none font-semibold text-right font-mono transition-colors ${
+                formData.pickupService !== "Home"
+                  ? "opacity-50 bg-slate-900/80 cursor-not-allowed text-slate-500 border-slate-850"
+                  : "bg-slate-950 border-slate-800 text-slate-200 focus:border-violet-500"
+              }`}
+            />
+          ) : (
+            <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold text-right font-mono">{formData.pickupCharge ?? 0}</div>
+          )}
         </div>
 
         {/* Delivery Charge */}
         <div>
           <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5">Delivery Charge</label>
-          <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold">{formData.deliveryCharge ?? 0}</div>
+          {isEdit ? (
+            <input
+              id="modal-deliveryCharge"
+              type="number"
+              value={formData.deliveryCharge === null || formData.deliveryCharge === undefined ? "" : formData.deliveryCharge}
+              disabled={formData.deliveryService !== "Home"}
+              onChange={(e) => handleFieldChange("deliveryCharge", e.target.value === "" ? null : Number(e.target.value))}
+              placeholder="0"
+              className={`w-full border rounded-xl px-3 py-2 text-xs outline-none font-semibold text-right font-mono transition-colors ${
+                formData.deliveryService !== "Home"
+                  ? "opacity-50 bg-slate-900/80 cursor-not-allowed text-slate-500 border-slate-850"
+                  : "bg-slate-950 border-slate-800 text-slate-200 focus:border-violet-500"
+              }`}
+            />
+          ) : (
+            <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold">{formData.deliveryCharge ?? 0}</div>
+          )}
         </div>
 
         {/* Total Amount */}

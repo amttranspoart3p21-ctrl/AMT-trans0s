@@ -63,9 +63,12 @@ export async function resolveCompanyNamesInShipment<T extends Partial<Shipment>>
   return resolved;
 }
 
-export function calculateQuantity(qty: string | null | undefined): number {
+export function calculateQuantity(qty: string | number | null | undefined): number {
   if (qty === null || qty === undefined) {
     return 1;
+  }
+  if (typeof qty === "number") {
+    return qty;
   }
   const clean = qty.trim();
   if (clean === "") {

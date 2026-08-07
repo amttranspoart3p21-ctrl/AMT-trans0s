@@ -29,7 +29,6 @@ export async function createShipment(
 
   const shipmentId = await generateShipmentId();
 
-  // If pricing breakdown or pricePerPiece is not explicitly passed, calculate pricing automatically via 3-step pricing service
   let transportRate = resolvedShipment.transportRate;
   let pickupCharge = resolvedShipment.pickupCharge;
   let deliveryCharge = resolvedShipment.deliveryCharge;
@@ -42,23 +41,13 @@ export async function createShipment(
     deliveryCharge = null;
     pricePerPiece = null;
     totalAmount = null;
-  } else if (
-    pricePerPiece === undefined ||
-    transportRate === undefined
-  ) {
+  } else {
     const calculatedPricing = await calculateShipmentPricing(resolvedShipment);
     transportRate = calculatedPricing.transportRate;
     pickupCharge = calculatedPricing.pickupCharge;
     deliveryCharge = calculatedPricing.deliveryCharge;
     pricePerPiece = calculatedPricing.pricePerPiece;
     totalAmount = calculatedPricing.totalAmount;
-  } else {
-    if (totalAmount === undefined) {
-      const quantityNum = calculateQuantity(resolvedShipment.quantity);
-      totalAmount = (pricePerPiece !== null && pricePerPiece !== undefined)
-        ? pricePerPiece * quantityNum
-        : null;
-    }
   }
 
   const shipmentRecord: ShipmentRecord = {
@@ -139,20 +128,13 @@ export async function createShipmentsBatch(
             deliveryCharge = null;
             pricePerPiece = null;
             totalAmount = null;
-          } else if (pricePerPiece === undefined || transportRate === undefined) {
+          } else {
             const calculatedPricing = await calculateShipmentPricing(resolvedShipment);
             transportRate = calculatedPricing.transportRate;
             pickupCharge = calculatedPricing.pickupCharge;
             deliveryCharge = calculatedPricing.deliveryCharge;
             pricePerPiece = calculatedPricing.pricePerPiece;
             totalAmount = calculatedPricing.totalAmount;
-          } else {
-            if (totalAmount === undefined) {
-              const quantityNum = calculateQuantity(resolvedShipment.quantity);
-              totalAmount = (pricePerPiece !== null && pricePerPiece !== undefined)
-                ? pricePerPiece * quantityNum
-                : null;
-            }
           }
 
           const shipmentRecord: ShipmentRecord = {
@@ -743,19 +725,21 @@ export async function updateShipment(shipmentId: string, updates: Partial<Shipme
   };
   
   let resolvedShipment = updatedShipment;
-  if (updates.fromCompany || updates.toCompany || updates.paymentCompany || updates.paymentReceivingBranch) {
-    resolvedShipment = await resolveCompanyNamesInShipment(updatedShipment);
-  }
-  
-  if (
-    updates.quantity !== undefined ||
-    updates.pricePerPiece !== undefined ||
-    updates.transportRate !== undefined
-  ) {
-    const quantityNum = calculateQuantity(resolvedShipment.quantity);
-    if (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined) {
-      resolvedShipment.totalAmount = resolvedShipment.pricePerPiece * quantityNum;
-    }
+  resolvedShipment = await resolveCompanyNamesInShipment(updatedShipment);
+
+  if (!resolvedShipment.paymentCompany) {
+    resolvedShipment.transportRate = null;
+    resolvedShipment.pickupCharge = null;
+    resolvedShipment.deliveryCharge = null;
+    resolvedShipment.pricePerPiece = null;
+    resolvedShipment.totalAmount = null;
+  } else {
+    const calculatedPricing = await calculateShipmentPricing(resolvedShipment);
+    resolvedShipment.transportRate = calculatedPricing.transportRate;
+    resolvedShipment.pickupCharge = calculatedPricing.pickupCharge;
+    resolvedShipment.deliveryCharge = calculatedPricing.deliveryCharge;
+    resolvedShipment.pricePerPiece = calculatedPricing.pricePerPiece;
+    resolvedShipment.totalAmount = calculatedPricing.totalAmount;
   }
 
   writeShipmentToRow(row, resolvedShipment);
@@ -809,12 +793,24 @@ export async function bulkUpdateShipments(shipmentIds: string[], updates: Partia
         if (
           updates.quantity !== undefined ||
           updates.pricePerPiece !== undefined ||
-          updates.transportRate !== undefined
+          updates.transportRate !== undefined ||
+          updates.pickupCharge !== undefined ||
+          updates.deliveryCharge !== undefined
         ) {
-          const quantityNum = calculateQuantity(resolvedShipment.quantity);
-          if (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined) {
-            resolvedShipment.totalAmount = resolvedShipment.pricePerPiece * quantityNum;
+          // Recalculate pricePerPiece if rates or charges are updated, and pricePerPiece is not directly overridden
+          if (
+            updates.pricePerPiece === undefined &&
+            (updates.transportRate !== undefined || updates.pickupCharge !== undefined || updates.deliveryCharge !== undefined)
+          ) {
+            const tRate = (resolvedShipment.transportRate !== null && resolvedShipment.transportRate !== undefined && !isNaN(Number(resolvedShipment.transportRate))) ? Number(resolvedShipment.transportRate) : 0;
+            const pCharge = (resolvedShipment.pickupCharge !== null && resolvedShipment.pickupCharge !== undefined && !isNaN(Number(resolvedShipment.pickupCharge))) ? Number(resolvedShipment.pickupCharge) : 0;
+            const dCharge = (resolvedShipment.deliveryCharge !== null && resolvedShipment.deliveryCharge !== undefined && !isNaN(Number(resolvedShipment.deliveryCharge))) ? Number(resolvedShipment.deliveryCharge) : 0;
+            resolvedShipment.pricePerPiece = tRate + pCharge + dCharge;
           }
+
+          const quantityNum = calculateQuantity(resolvedShipment.quantity);
+          const ppp = (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined && !isNaN(Number(resolvedShipment.pricePerPiece))) ? Number(resolvedShipment.pricePerPiece) : 0;
+          resolvedShipment.totalAmount = ppp * quantityNum;
         }
         
         writeShipmentToRow(row, resolvedShipment);
@@ -881,6 +877,12 @@ export async function bulkUpdateSpreadsheetRows(
           ...item.updates,
           shipmentId: item.shipmentId,
         };
+
+        console.log(`========== [SERVICE PRICING DEBUG: Spreadsheet Row Update Start (${item.shipmentId})] ==========`);
+        console.log("Original Loc Shipment:", loc.shipment);
+        console.log("Updates requested    :", item.updates);
+        console.log("Merged Shipment      :", updatedShipment);
+        console.log("==========================================================================================");
         
         let resolvedShipment = updatedShipment;
         if (
@@ -895,13 +897,31 @@ export async function bulkUpdateSpreadsheetRows(
         if (
           item.updates.quantity !== undefined ||
           item.updates.pricePerPiece !== undefined ||
-          item.updates.transportRate !== undefined
+          item.updates.transportRate !== undefined ||
+          item.updates.pickupCharge !== undefined ||
+          item.updates.deliveryCharge !== undefined
         ) {
-          const quantityNum = calculateQuantity(resolvedShipment.quantity);
-          if (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined) {
-            resolvedShipment.totalAmount = resolvedShipment.pricePerPiece * quantityNum;
+          // Recalculate pricePerPiece if rates or charges are updated, and pricePerPiece is not directly overridden
+          if (
+            item.updates.pricePerPiece === undefined &&
+            (item.updates.transportRate !== undefined || item.updates.pickupCharge !== undefined || item.updates.deliveryCharge !== undefined)
+          ) {
+            const tRate = (resolvedShipment.transportRate !== null && resolvedShipment.transportRate !== undefined && !isNaN(Number(resolvedShipment.transportRate))) ? Number(resolvedShipment.transportRate) : 0;
+            const pCharge = (resolvedShipment.pickupCharge !== null && resolvedShipment.pickupCharge !== undefined && !isNaN(Number(resolvedShipment.pickupCharge))) ? Number(resolvedShipment.pickupCharge) : 0;
+            const dCharge = (resolvedShipment.deliveryCharge !== null && resolvedShipment.deliveryCharge !== undefined && !isNaN(Number(resolvedShipment.deliveryCharge))) ? Number(resolvedShipment.deliveryCharge) : 0;
+            resolvedShipment.pricePerPiece = tRate + pCharge + dCharge;
+            console.log(`[SERVICE PRICING DEBUG: Recalculated pricePerPiece to ${resolvedShipment.pricePerPiece}]`);
           }
+
+          const quantityNum = calculateQuantity(resolvedShipment.quantity);
+          const ppp = (resolvedShipment.pricePerPiece !== null && resolvedShipment.pricePerPiece !== undefined && !isNaN(Number(resolvedShipment.pricePerPiece))) ? Number(resolvedShipment.pricePerPiece) : 0;
+          resolvedShipment.totalAmount = ppp * quantityNum;
+          console.log(`[SERVICE PRICING DEBUG: Calculated totalAmount to ${resolvedShipment.totalAmount} (ppp: ${ppp}, qty: ${quantityNum})]`);
         }
+
+        console.log(`========== [SERVICE PRICING DEBUG: Writing Row to Excel (${item.shipmentId})] ==========`);
+        console.log("Final Resolved Shipment:", resolvedShipment);
+        console.log("==========================================================================================");
         
         writeShipmentToRow(row, resolvedShipment);
         row.commit();

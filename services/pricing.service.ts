@@ -14,6 +14,93 @@ export interface PricingCalculationResult {
   totalAmount: number | null;
 }
 
+function performCompanyRouteRateLookupAndLog(
+  label: string,
+  companyRates: any[],
+  expectedCompanyId: string,
+  expectedCompanyName: string,
+  expectedFromBranchId: string,
+  expectedFromBranchName: string,
+  expectedToBranchId: string,
+  expectedToBranchName: string,
+  expectedPackageId: string,
+  expectedPackageName: string
+) {
+  const fromBranchKey = expectedFromBranchName.trim().toLowerCase();
+  const toBranchKey = expectedToBranchName.trim().toLowerCase();
+  const packageKey = expectedPackageName.trim().toLowerCase();
+
+  console.log(`\n========================================`);
+  console.log(`${label} LOOKUP`);
+  console.log(`========================================`);
+  console.log(`Expected keys:`);
+  console.log(`- Company Name   : ${expectedCompanyName}`);
+  console.log(`- Company ID     : ${expectedCompanyId}`);
+  console.log(`- From Branch ID : ${expectedFromBranchId} (${expectedFromBranchName})`);
+  console.log(`- To Branch ID   : ${expectedToBranchId} (${expectedToBranchName})`);
+  console.log(`- Package ID     : ${expectedPackageId} (${expectedPackageName})`);
+
+  let matchedRate = null;
+  const candidates: any[] = [];
+
+  for (const c of companyRates) {
+    if (c.status !== "Active") continue;
+
+    // Check if company matches (case-insensitive)
+    const isCompanyMatch = c.companyId.toLowerCase() === expectedCompanyId.toLowerCase();
+    if (!isCompanyMatch) continue;
+
+    // Company matched, this is a candidate!
+    const fromBranchMatch = expectedFromBranchId ? (c.fromBranchId === expectedFromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey;
+    const toBranchMatch = expectedToBranchId ? (c.toBranchId === expectedToBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey;
+    const packageMatch = expectedPackageId ? (c.packageId === expectedPackageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey;
+
+    const isMatch = fromBranchMatch && toBranchMatch && packageMatch;
+
+    candidates.push({
+      rate: c,
+      checks: {
+        companyId: true,
+        fromBranch: fromBranchMatch,
+        toBranch: toBranchMatch,
+        package: packageMatch
+      }
+    });
+
+    if (isMatch) {
+      matchedRate = c;
+    }
+  }
+
+  // Print near-matches / candidates
+  if (candidates.length > 0) {
+    console.log(`\nCandidates (Company matched):`);
+    candidates.forEach((cand, idx) => {
+      const c = cand.rate;
+      const ch = cand.checks;
+      console.log(`Candidate #${idx + 1}:`);
+      console.log(`  Row Details: CompanyId=${c.companyId}, FromBranchId=${c.fromBranchId} (${c.fromBranchName}), ToBranchId=${c.toBranchId} (${c.toBranchName}), PackageId=${c.packageId} (${c.packageName})`);
+      console.log(`  Checks:`);
+      console.log(`    Company ID  : ✅`);
+      console.log(`    From Branch : ${ch.fromBranch ? "✅" : "❌ (Expected: " + (expectedFromBranchId || "none") + "/" + expectedFromBranchName + ", Found: " + c.fromBranchId + "/" + c.fromBranchName + ")"}`);
+      console.log(`    To Branch   : ${ch.toBranch ? "✅" : "❌ (Expected: " + (expectedToBranchId || "none") + "/" + expectedToBranchName + ", Found: " + c.toBranchId + "/" + c.toBranchName + ")"}`);
+      console.log(`    Package     : ${ch.package ? "✅" : "❌ (Expected: " + (expectedPackageId || "none") + "/" + expectedPackageName + ", Found: " + c.packageId + "/" + c.packageName + ")"}`);
+    });
+  } else {
+    console.log(`\nNo candidates found for Company ID ${expectedCompanyId} in active rates.`);
+  }
+
+  if (matchedRate) {
+    console.log(`\n✅ MATCH FOUND`);
+    console.log(`Rate Row:`, matchedRate);
+  } else {
+    console.log(`\n❌ NO MATCH`);
+  }
+  console.log(`========================================\n`);
+
+  return matchedRate;
+}
+
 export async function calculateShipmentPricing(
   shipment: Pick<
     Shipment,
@@ -25,7 +112,13 @@ export async function calculateShipmentPricing(
     | "quantity"
     | "pickupService"
     | "deliveryService"
-  > & { paymentCompany?: string; paymentReceivingBranch?: "From Company" | "To Company" | "" }
+  > & {
+    paymentCompany?: string;
+    paymentReceivingBranch?: "From Company" | "To Company" | "";
+    transportRate?: number | null;
+    pickupCharge?: number | null;
+    deliveryCharge?: number | null;
+  }
 ): Promise<PricingCalculationResult> {
   const companies = await readCompanies();
   const resolvedShipment = await resolveCompanyNamesInShipment(shipment);
@@ -80,17 +173,7 @@ export async function calculateShipmentPricing(
   );
   const packageExists = !!packageObj;
 
-  if (!packageExists) {
-    return {
-      transportRate: null,
-      pickupCharge: null,
-      deliveryCharge: null,
-      pricePerPiece: null,
-      totalAmount: null,
-    };
-  }
-
-  const packageId = packageObj.packageId;
+  const packageId = packageObj?.packageId || "";
 
   // Resolve branch IDs
   const branches = await readBranches();
@@ -104,95 +187,119 @@ export async function calculateShipmentPricing(
   );
   const toBranchId = toBranchObj?.branchId || "";
 
-  let transportRate: number | null = null;
+  let transportRate: number = 0;
   let pickupCharge = 0;
   let deliveryCharge = 0;
-  let isGlobalPackage = false;
 
-  // 1. Resolve Transport Rate
   const companyRates = await readCompanyRouteRates();
-  const matchedCompanyRate = companyRates.find(
-    (c) =>
-      c.status === "Active" &&
-      c.companyId.toLowerCase() === paymentCompanyId.toLowerCase() &&
-      (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
-      (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
-      (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
-  );
 
-  if (matchedCompanyRate) {
-    transportRate = matchedCompanyRate.transportRate;
-  } else {
-    // STEP 2: Search Global Route Rate (From Branch + To Branch + Package)
-    const globalRates = await readGlobalRouteRates();
-    const matchedGlobalRate = globalRates.find(
-      (g) =>
-        g.status === "Active" &&
-        (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.toLowerCase() === fromBranchKey) : g.fromBranchName.toLowerCase() === fromBranchKey) &&
-        (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.toLowerCase() === toBranchKey) : g.toBranchName.toLowerCase() === toBranchKey) &&
-        (packageId ? (g.packageId === packageId || g.packageName.toLowerCase() === packageKey) : g.packageName.toLowerCase() === packageKey)
+  let matchedCompanyRate = null;
+  let matchedFromCompanyRate = null;
+  let matchedToCompanyRate = null;
+
+  if (packageExists) {
+    // 1. Resolve Transport Rate
+    matchedCompanyRate = performCompanyRouteRateLookupAndLog(
+      "TRANSPORT",
+      companyRates,
+      paymentCompanyId,
+      paymentCompanyResolved,
+      fromBranchId,
+      resolvedShipment.fromAmtBranch || "",
+      toBranchId,
+      resolvedShipment.toAmtBranch || "",
+      packageId,
+      packageKey
     );
 
-    if (matchedGlobalRate) {
-      transportRate = matchedGlobalRate.rate;
-      isGlobalPackage = true;
+    if (matchedCompanyRate) {
+      transportRate = matchedCompanyRate.transportRate;
+    } else {
+      // STEP 2: Search Global Route Rate (From Branch + To Branch + Package)
+      const globalRates = await readGlobalRouteRates();
+      const matchedGlobalRate = globalRates.find(
+        (g) =>
+          g.status === "Active" &&
+          (fromBranchId ? (g.fromBranchId === fromBranchId || g.fromBranchName.toLowerCase() === fromBranchKey) : g.fromBranchName.toLowerCase() === fromBranchKey) &&
+          (toBranchId ? (g.toBranchId === toBranchId || g.toBranchName.toLowerCase() === toBranchKey) : g.toBranchName.toLowerCase() === toBranchKey) &&
+          (packageId ? (g.packageId === packageId || g.packageName.toLowerCase() === packageKey) : g.packageName.toLowerCase() === packageKey)
+      );
+
+      if (matchedGlobalRate) {
+        transportRate = matchedGlobalRate.rate;
+      }
+    }
+
+    // 2. Resolve default database pickupCharge
+    if (resolvedShipment.pickupService === "Home") {
+      matchedFromCompanyRate = performCompanyRouteRateLookupAndLog(
+        "PICKUP",
+        companyRates,
+        fromCompanyId,
+        fromCompanyResolved,
+        fromBranchId,
+        resolvedShipment.fromAmtBranch || "",
+        toBranchId,
+        resolvedShipment.toAmtBranch || "",
+        packageId,
+        packageKey
+      );
+    }
+
+    // 3. Resolve default database deliveryCharge
+    if (resolvedShipment.deliveryService === "Home") {
+      matchedToCompanyRate = performCompanyRouteRateLookupAndLog(
+        "DELIVERY",
+        companyRates,
+        toCompanyId,
+        toCompanyResolved,
+        fromBranchId,
+        resolvedShipment.fromAmtBranch || "",
+        toBranchId,
+        resolvedShipment.toAmtBranch || "",
+        packageId,
+        packageKey
+      );
     }
   }
 
-  if (isGlobalPackage) {
-    pickupCharge = 0;
-    deliveryCharge = 0;
+  // If client provided a valid transportRate, respect it
+  if (typeof shipment.transportRate === "number" && !isNaN(shipment.transportRate) && shipment.transportRate >= 0) {
+    transportRate = shipment.transportRate;
+  }
+
+  // Resolve final pickup charge
+  let dbPickupCharge = 0;
+  if (matchedFromCompanyRate && typeof matchedFromCompanyRate.pickupCharge === "number" && !isNaN(matchedFromCompanyRate.pickupCharge)) {
+    dbPickupCharge = matchedFromCompanyRate.pickupCharge;
+  }
+
+  if (typeof shipment.pickupCharge === "number" && !isNaN(shipment.pickupCharge) && shipment.pickupCharge >= 0) {
+    pickupCharge = shipment.pickupCharge;
   } else {
-    // 2. Resolve Pickup Charge (always belongs to Sender Company package)
-    if (resolvedShipment.pickupService === "Branch" || resolvedShipment.pickupService === "Free Home") {
-      pickupCharge = 0;
-    } else if (resolvedShipment.pickupService === "Home") {
-      const matchedFromCompanyRate = companyRates.find(
-        (c) =>
-          c.status === "Active" &&
-          c.companyId.toLowerCase() === fromCompanyId.toLowerCase() &&
-          (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
-          (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
-          (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
-      );
+    pickupCharge = dbPickupCharge;
+  }
 
-      if (matchedFromCompanyRate && typeof matchedFromCompanyRate.pickupCharge === "number" && !isNaN(matchedFromCompanyRate.pickupCharge)) {
-        pickupCharge = matchedFromCompanyRate.pickupCharge;
-      } else {
-        pickupCharge = 0;
-      }
-    }
+  // Resolve final delivery charge
+  let dbDeliveryCharge = 0;
+  if (matchedToCompanyRate && typeof matchedToCompanyRate.deliveryCharge === "number" && !isNaN(matchedToCompanyRate.deliveryCharge)) {
+    dbDeliveryCharge = matchedToCompanyRate.deliveryCharge;
+  }
 
-    // 3. Resolve Delivery Charge (always belongs to Receiver Company package)
-    if (resolvedShipment.deliveryService === "Branch" || resolvedShipment.deliveryService === "Free Home") {
-      deliveryCharge = 0;
-    } else if (resolvedShipment.deliveryService === "Home") {
-      const matchedToCompanyRate = companyRates.find(
-        (c) =>
-          c.status === "Active" &&
-          c.companyId.toLowerCase() === toCompanyId.toLowerCase() &&
-          (fromBranchId ? (c.fromBranchId === fromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey) &&
-          (toBranchId ? (c.toBranchId === toBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey) &&
-          (packageId ? (c.packageId === packageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey)
-      );
-
-      if (matchedToCompanyRate && typeof matchedToCompanyRate.deliveryCharge === "number" && !isNaN(matchedToCompanyRate.deliveryCharge)) {
-        deliveryCharge = matchedToCompanyRate.deliveryCharge;
-      } else {
-        deliveryCharge = 0;
-      }
-    }
+  if (typeof shipment.deliveryCharge === "number" && !isNaN(shipment.deliveryCharge) && shipment.deliveryCharge >= 0) {
+    deliveryCharge = shipment.deliveryCharge;
+  } else {
+    deliveryCharge = dbDeliveryCharge;
   }
 
   // 4. Price Calculation
-  let pricePerPiece: number | null = null;
-  let totalAmount: number | null = null;
+  const tRate = (transportRate !== null && transportRate !== undefined && !isNaN(Number(transportRate))) ? Number(transportRate) : 0;
+  const pCharge = (pickupCharge !== null && pickupCharge !== undefined && !isNaN(Number(pickupCharge))) ? Number(pickupCharge) : 0;
+  const dCharge = (deliveryCharge !== null && deliveryCharge !== undefined && !isNaN(Number(deliveryCharge))) ? Number(deliveryCharge) : 0;
 
-  if (transportRate !== null) {
-    pricePerPiece = transportRate + pickupCharge + deliveryCharge;
-    const quantityNum = calculateQuantity(resolvedShipment.quantity);
-    totalAmount = pricePerPiece * quantityNum;
-  }
+  const pricePerPiece = tRate + pCharge + dCharge;
+  const quantityNum = calculateQuantity(resolvedShipment.quantity);
+  const totalAmount = pricePerPiece * quantityNum;
 
   return {
     transportRate,

@@ -177,25 +177,7 @@ export default function ShipmentTable({
     return false;
   };
 
-  const EDITABLE_FIELDS: Array<keyof ShipmentRecord> = [
-    "date",
-    "vehicleNumber",
-    "fromAmtBranch",
-    "fromCompany",
-    "toAmtBranch",
-    "toCompany",
-    "packageType",
-    "quantity",
-    "pricePerPiece",
-    "pickupService",
-    "deliveryService",
-    "paymentReceivingBranch",
-    "paymentCompany",
-    "paymentStatus",
-    "deliveryStatus",
-    "ourInvoiceNumber",
-    "customerInvoiceNumber"
-  ];
+  const EDITABLE_FIELDS = EDITABLE_COLUMNS;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>, shipmentId: string, field: keyof ShipmentRecord) => {
     if (mode !== "spreadsheet") return;
@@ -314,11 +296,13 @@ export default function ShipmentTable({
       : "";
 
     if (isEditing) {
-      if (field === "totalAmount" || field === "transportRate" || field === "pickupCharge" || field === "deliveryCharge") {
+      if (field === "totalAmount") {
         return (
           <div
             id={`cell-${shipment.shipmentId}-${field}`}
-            className="w-full border border-slate-850 bg-slate-950/40 text-slate-350 rounded-lg px-3.5 h-[42px] text-sm text-right font-mono flex items-center justify-end select-none"
+            tabIndex={0}
+            onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
+            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-right font-mono flex items-center justify-end select-none outline-none ${borderClass} bg-slate-950/40 text-slate-350`}
           >
             {val !== null && val !== undefined ? `₹${val.toLocaleString()}` : "-"}
           </div>
@@ -729,30 +713,15 @@ export default function ShipmentTable({
 
       switch (type) {
         case "select": {
-          const isGlobal = isGlobalRoutePackage(
-            shipment.packageType,
-            shipment.fromAmtBranch,
-            shipment.toAmtBranch,
-            shipment.paymentCompany,
-            companyRouteRates,
-            globalRouteRates,
-            companies,
-            branches,
-            shipment.paymentReceivingBranch
-          );
-          const isDisabled = isGlobal && (field === "pickupService" || field === "deliveryService");
           return (
             <select
               id={`cell-${shipment.shipmentId}-${field}`}
-              value={isDisabled ? "Branch" : (val !== null && val !== undefined ? String(val) : "")}
+              value={val !== null && val !== undefined ? String(val) : ""}
               onChange={(e) => onChangeRow?.(shipment.shipmentId, field, e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-              disabled={isDisabled}
               data-shipment-id={shipment.shipmentId}
               data-field={field}
-              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${
-                isDisabled ? "bg-slate-900/60 border-slate-800 text-slate-550 cursor-not-allowed opacity-60 pointer-events-none" : `${borderClass} cursor-pointer`
-              }`}
+              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} cursor-pointer`}
             >
               <option value="">Select...</option>
               {options?.map((opt) => (
@@ -777,12 +746,17 @@ export default function ShipmentTable({
               className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass}`}
             />
           );
-        case "number":
+        case "number": {
+          const isPickupDisabled = field === "pickupCharge" && shipment.pickupService !== "Home";
+          const isDeliveryDisabled = field === "deliveryCharge" && shipment.deliveryService !== "Home";
+          const isDisabled = isPickupDisabled || isDeliveryDisabled;
+
           return (
             <input
               id={`cell-${shipment.shipmentId}-${field}`}
               type="number"
-              value={val !== null && val !== undefined ? String(val) : ""}
+              value={val !== null && val !== undefined ? String(val) : (isDisabled ? "0" : "")}
+              disabled={isDisabled}
               onChange={(e) => {
                 const numVal = e.target.value === "" ? null : Number(e.target.value);
                 onChangeRow?.(shipment.shipmentId, field, numVal);
@@ -791,9 +765,12 @@ export default function ShipmentTable({
               onFocus={(e) => e.target.select?.()}
               data-shipment-id={shipment.shipmentId}
               data-field={field}
-              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} ${alignClass}`}
+              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} ${alignClass} ${
+                isDisabled ? "opacity-50 bg-slate-900/80 cursor-not-allowed text-slate-500 border-slate-850" : ""
+              }`}
             />
           );
+        }
         case "text":
         default:
           return (

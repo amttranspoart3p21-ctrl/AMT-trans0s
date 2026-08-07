@@ -8,6 +8,10 @@ export async function PUT(request: NextRequest) {
     // Support row-specific spreadsheet batch updates
     if (body.rows && Array.isArray(body.rows)) {
       const { rows } = body;
+      console.log("========== [BACKEND PRICING DEBUG: Incoming Payload] ==========");
+      console.log("Rows Payload:", JSON.stringify(rows, null, 2));
+      console.log("=============================================================");
+
       if (rows.length === 0) {
         return NextResponse.json({
           success: true,
@@ -17,6 +21,10 @@ export async function PUT(request: NextRequest) {
       }
       
       const updatedShipments = await bulkUpdateSpreadsheetRows(rows);
+      console.log("========== [BACKEND PRICING DEBUG: Updated Shipments Result] ==========");
+      console.log("Updated Shipments:", JSON.stringify(updatedShipments, null, 2));
+      console.log("=====================================================================");
+
       return NextResponse.json({
         success: true,
         message: `Successfully updated ${updatedShipments.length} shipments.`,
