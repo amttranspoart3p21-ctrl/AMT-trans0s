@@ -27,6 +27,7 @@ export interface BrandingConfig {
 export interface DocumentConfig {
   id: string;
   title: string;
+  orientation?: "portrait" | "landscape";
   columns: ColumnConfig[];
   totals: TotalsConfig[];
   branding: BrandingConfig;
@@ -72,17 +73,30 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
   shipment: {
     id: "shipment",
     title: "Shipment Register Statement",
+    orientation: "landscape",
     branding: defaultBranding,
     columns: [
+      { header: "S.No", key: "sNo", align: "center" },
       { header: "Date", key: "date", align: "left", format: "date" },
-      { header: "Vehicle", key: "vehicleNumber", align: "left" },
-      { header: "From Branch", key: "fromBranch", align: "left" },
+      { header: "Vehicle No.", key: "vehicleNumber", align: "left" },
+      { header: "From", key: "fromAmtBranch", align: "center" },
       { header: "From Company", key: "fromCompany", align: "left" },
-      { header: "To Branch", key: "toBranch", align: "left" },
-      { header: "To Company", key: "toCompany", align: "left" },
-      { header: "Package", key: "packageType", align: "left" },
-      { header: "Qty", key: "quantity", align: "center" },
+      { header: "To", key: "toAmtBranch", align: "center" },
+      { header: "Material", key: "packageType", align: "left" },
+      { header: "QTY", key: "quantity", align: "center" },
+      { header: "TS INV No.", key: "ourInvoiceNumber", align: "left" },
+      { header: "Co. INV No.", key: "customerInvoiceNumber", align: "left" },
+      { header: "Payment Company", key: "paymentCompany", align: "left" },
+      { header: "Payment Branch", key: "paymentReceivingBranch", align: "left" },
+      { header: "Pickup At", key: "pickupService", align: "center" },
+      { header: "Delivery At", key: "deliveryService", align: "center" },
+      { header: "Delivery Status", key: "deliveryStatus", align: "center" },
+      { header: "Transport Rate", key: "transportRate", align: "right", format: "currency" },
+      { header: "Pickup Charge", key: "pickupCharge", align: "right", format: "currency" },
+      { header: "Delivery Charge", key: "deliveryCharge", align: "right", format: "currency" },
+      { header: "Price Per Rate", key: "pricePerPiece", align: "right", format: "currency" },
       { header: "Total Amount", key: "totalAmount", align: "right", format: "currency" },
+      { header: "Payment Status", key: "paymentStatus", align: "center" },
     ],
     totals: [
       { label: "Total Shipments", calc: (list) => list.length },
@@ -245,7 +259,7 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
   },
   billing: {
     id: "billing",
-    title: "Transport Tax Invoice",
+    title: "Company Billing Statement",
     branding: defaultBranding,
     columns: [
       { header: "Package Description", key: "packageType", align: "left" },

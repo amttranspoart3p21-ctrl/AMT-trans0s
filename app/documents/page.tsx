@@ -317,11 +317,7 @@ export default function DocumentsPage() {
                 className="w-full bg-slate-955 border border-slate-800 text-xs text-slate-200 rounded-xl px-4 py-2.5 outline-none cursor-pointer focus:border-violet-500 focus:ring-1 focus:ring-violet-500 appearance-none shadow-md"
               >
                 <option value="shipment">Shipment Statement</option>
-                <option value="branch">Branch Statement</option>
-                <option value="company">Company Statement</option>
-                <option value="vehicle">Vehicle Statement</option>
-                <option value="payment">Payment Statement</option>
-                <option value="billing">Tax Invoice (Billing)</option>
+                <option value="billing">Company Billing Statement</option>
               </select>
               <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -398,6 +394,7 @@ export default function DocumentsPage() {
               companyName={companyName}
               dateRange={dateRangeStr}
               generatedDate={todayStr}
+              branches={branches}
             />
           )}
         </div>

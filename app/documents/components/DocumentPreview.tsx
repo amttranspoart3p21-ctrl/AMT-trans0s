@@ -4,7 +4,7 @@ import DocumentHeader from "./DocumentHeader";
 import DocumentTable from "./DocumentTable";
 import TotalsSection from "./TotalsSection";
 import type { DocumentConfig } from "./document-config";
-import type { ShipmentRecord } from "@/types/shipment";
+import type { Branch } from "@/types/branch";
 
 interface DocumentPreviewProps {
   config: DocumentConfig;
@@ -13,6 +13,7 @@ interface DocumentPreviewProps {
   companyName?: string;
   dateRange?: string;
   generatedDate: string;
+  branches?: Branch[];
 }
 
 export default function DocumentPreview({
@@ -22,6 +23,7 @@ export default function DocumentPreview({
   companyName,
   dateRange,
   generatedDate,
+  branches = [],
 }: DocumentPreviewProps) {
   // Compute totals dynamically based on config calculation callbacks
   const calculatedTotals = config.totals.map((t) => ({
@@ -30,7 +32,7 @@ export default function DocumentPreview({
   }));
 
   return (
-    <DocumentLayout>
+    <DocumentLayout orientation={config.orientation}>
       {/* 1. Header with branding fields */}
       <DocumentHeader
         title={config.title}
@@ -43,7 +45,7 @@ export default function DocumentPreview({
 
       {/* 2. Main Shipment Records Table */}
       <div className="flex-1 min-h-[300px]">
-        <DocumentTable shipments={shipments} columns={config.columns} />
+        <DocumentTable shipments={shipments} columns={config.columns} branches={branches} />
       </div>
 
       {/* 3. Totals and Signatures footer block */}

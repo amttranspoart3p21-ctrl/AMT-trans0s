@@ -38,7 +38,7 @@ export default function DocumentHeader({
 
         {/* Logo Placeholder Box */}
         <div className="h-16 w-16 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 text-slate-400 font-bold text-[10px] tracking-wider select-none bg-slate-50">
-          AMT LOGO
+          LOGO
         </div>
       </div>
 
