@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -17,7 +17,8 @@ export default function Input({
   type = "text",
   ...props
 }: InputProps) {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const autoId = useId();
+  const inputId = id || autoId;
 
   const borderClass = error
     ? "border-rose-500/70 focus:border-rose-500 bg-rose-955/10 text-rose-200"
@@ -26,7 +27,7 @@ export default function Input({
     : "border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 bg-slate-950 text-slate-200";
 
   return (
-    <div className="flex flex-col gap-1.5 w-full select-none">
+    <div className="flex flex-col gap-1.5 w-full">
       {label && (
         <label
           htmlFor={inputId}

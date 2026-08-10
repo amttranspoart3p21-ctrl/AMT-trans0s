@@ -61,10 +61,10 @@ const sumAmounts = (shipments: ShipmentRecord[]): number => {
 
 // Default Branding details
 const defaultBranding: BrandingConfig = {
-  companyName: "ANTIGRAVITY MOTOR TRANSPORT",
+  companyName: "TMS TRANSOS",
   address: "Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802",
   phone: "+91 98765 43210 / +91 87654 32109",
-  email: "billing@amt-transport.com",
+  email: "billing@tms-transport.com",
   gstNumber: "33AABCA1234F1Z5",
   logoUrl: "/logo-placeholder.png",
 };
@@ -82,6 +82,7 @@ export const documentConfigurations: Record<string, DocumentConfig> = {
       { header: "From", key: "fromAmtBranch", align: "center" },
       { header: "From Company", key: "fromCompany", align: "left" },
       { header: "To", key: "toAmtBranch", align: "center" },
+      { header: "To Company", key: "toCompany", align: "left" },
       { header: "Material", key: "packageType", align: "left" },
       { header: "QTY", key: "quantity", align: "center" },
       { header: "TS INV No.", key: "ourInvoiceNumber", align: "left" },

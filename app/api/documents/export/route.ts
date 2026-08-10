@@ -56,10 +56,15 @@ export async function GET(req: NextRequest) {
     headerRow.height = 28;
 
     // Add shipment data rows
-    shipments.forEach(s => {
+    shipments.forEach((s, idx) => {
       const rowData: any = {};
       config.columns.forEach(col => {
-        let val = s[col.key as keyof typeof s];
+        let val;
+        if (col.key === "sNo") {
+          val = idx + 1;
+        } else {
+          val = s[col.key as keyof typeof s];
+        }
         if (val === null || val === undefined) {
           val = "";
         }

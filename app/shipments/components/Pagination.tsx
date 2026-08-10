@@ -7,6 +7,8 @@ interface PaginationProps {
   limit: number;
   onLimitChange: (newLimit: number) => void;
   totalRecords: number;
+  limitOptions?: number[];
+  entityName?: string;
 }
 
 export default function Pagination({
@@ -16,6 +18,8 @@ export default function Pagination({
   limit,
   onLimitChange,
   totalRecords,
+  limitOptions,
+  entityName = "Shipments",
 }: PaginationProps) {
   if (totalRecords === 0) return null;
 
@@ -56,7 +60,7 @@ export default function Pagination({
       <div className="flex items-center">
         <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
           Showing <span className="font-bold text-slate-350">{fromIndex}–{toIndex}</span> of{" "}
-          <span className="font-bold text-slate-350">{totalRecords}</span> Shipments
+          <span className="font-bold text-slate-350">{totalRecords}</span> {entityName}
         </p>
       </div>
 
@@ -68,7 +72,7 @@ export default function Pagination({
           onChange={(e) => onLimitChange(Number(e.target.value))}
           className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-350 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none cursor-pointer"
         >
-          {[15, 25, 50, 100].map((opt) => (
+          {(limitOptions || [15, 25, 50, 100]).map((opt) => (
             <option key={opt} value={opt}>
               {opt} Rows
             </option>

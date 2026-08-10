@@ -136,7 +136,9 @@ async function testPricing() {
       fromAmtBranch: chennaiBranch.branchName,
       toAmtBranch: amburBranch.branchName,
       packageType: box4x4.packageName,
-      quantity: 2,
+      quantity: "2",
+      pickupService: "Branch",
+      deliveryService: "Branch",
     });
 
     console.log("Test 1 Result:", test1Result);
@@ -192,7 +194,7 @@ async function testPricing() {
       fromAmtBranch: chennaiBranch.branchName,
       toAmtBranch: amburBranch.branchName,
       packageType: box4x4.packageName,
-      quantity: 3,
+      quantity: "3",
       pickupService: "Home",
       deliveryService: "Home",
     });
@@ -232,7 +234,9 @@ async function testPricing() {
       fromAmtBranch: chennaiBranch.branchName,
       toAmtBranch: amburBranch.branchName,
       packageType: "Machine Parts",
-      quantity: 4,
+      quantity: "4",
+      pickupService: "Branch",
+      deliveryService: "Branch",
     });
 
     console.log("Test 3 Result (XYZ Company):", test3Result);
@@ -249,7 +253,7 @@ async function testPricing() {
       toAmtBranch: amburBranch.branchName,
       toCompany: abcCompany.companyName,
       packageType: "Machine Parts",
-      quantity: 4,
+      quantity: "4",
       ourInvoiceNumber: "INV-999",
       customerInvoiceNumber: "CUST-999",
       paymentCompany: xyzCompany.companyName,
@@ -269,7 +273,7 @@ async function testPricing() {
       fromAmtBranch: chennaiBranch.branchName,
       toAmtBranch: amburBranch.branchName,
       packageType: "Machine Parts",
-      quantity: 1,
+      quantity: "1",
       pickupService: "Home",
       deliveryService: "Home",
     });
@@ -292,7 +296,7 @@ async function testPricing() {
       fromAmtBranch: chennaiBranch.branchName,
       toAmtBranch: amburBranch.branchName,
       packageType: "Super New Package",
-      quantity: 5,
+      quantity: "5",
       pickupService: "Home",
       deliveryService: "Home",
     });
@@ -312,7 +316,7 @@ async function testPricing() {
       toAmtBranch: amburBranch.branchName,
       toCompany: abcCompany.companyName,
       packageType: "Super New Package",
-      quantity: 5,
+      quantity: "5",
       ourInvoiceNumber: "INV-1000",
       customerInvoiceNumber: "CUST-1000",
       paymentCompany: xyzCompany.companyName,

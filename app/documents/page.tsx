@@ -279,7 +279,7 @@ export default function DocumentsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto relative select-none">
+      <div className="doc-page-container flex-1 flex flex-col p-6  w-full mx-auto relative select-none">
         {/* Header Panel */}
         <header className="no-print flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
           <div>
@@ -353,7 +353,7 @@ export default function DocumentsPage() {
         </div>
 
         {/* Main Document Preview Layout Panel */}
-        <div className="flex-1 flex flex-col items-center">
+        <div className="doc-preview-wrapper flex-1 flex flex-col items-center">
           {loading ? (
             <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
               <svg className="animate-spin h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24">

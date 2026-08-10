@@ -76,7 +76,7 @@ export default function DocumentTable({ shipments, columns, branches = [] }: Doc
             {columns.map((col, idx) => (
               <th
                 key={idx}
-                className={`font-black ${isManyCols ? "px-1.5 py-2 text-[8.5px] leading-tight" : "px-4 py-3 text-[10px]"} ${
+                className={`col-${col.key} font-black ${isManyCols ? "px-1.5 py-2 text-[8.5px] leading-tight" : "px-4 py-3 text-[10px]"} ${
                   col.align === "right"
                     ? "text-right"
                     : col.align === "center"
@@ -109,7 +109,7 @@ export default function DocumentTable({ shipments, columns, branches = [] }: Doc
                   return (
                     <td
                       key={cIdx}
-                      className={`text-slate-700 font-medium ${
+                      className={`col-${col.key} text-slate-700 font-medium ${
                         isManyCols ? "px-1.5 py-1.5 text-[8.5px] leading-tight" : "px-4 py-2.5 text-xs"
                       } ${
                         col.align === "right"

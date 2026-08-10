@@ -8,7 +8,7 @@ interface DocumentLayoutProps {
 export default function DocumentLayout({ children, orientation = "portrait" }: DocumentLayoutProps) {
   const isLandscape = orientation === "landscape";
   return (
-    <div className="w-full bg-slate-950 p-4 md:p-6 flex justify-center overflow-x-auto">
+    <div className="doc-layout-outer w-full bg-slate-950 p-4 md:p-6 flex justify-center overflow-x-auto">
       <div 
         id="printable-document"
         className={`w-full ${
@@ -16,7 +16,6 @@ export default function DocumentLayout({ children, orientation = "portrait" }: D
         } bg-white text-slate-900 shadow-2xl rounded-xl flex flex-col justify-between relative border border-slate-200 select-text ${
           isLandscape ? "landscape-doc" : ""
         }`}
-        style={{ contentVisibility: "auto" }}
       >
         {children}
       </div>

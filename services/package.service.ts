@@ -133,10 +133,9 @@ export async function getPackages(
   let packages = await readPackages();
 
   // Step 1: Filter by Company Scope if companyId is provided
-  // Returns global packages (no companyId) + company-specific packages matching companyId
   if (companyId) {
     packages = packages.filter(
-      (pkg) => !pkg.companyId || pkg.companyId === companyId
+      (pkg) => pkg.companyId === companyId
     );
   }
 
