@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { ShipmentRecord } from "@/types/shipment";
+import { PAYMENT_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import type { Company } from "@/types/company";
 import type { Package } from "@/types/packageType";
@@ -350,21 +351,47 @@ export default function ShipmentTable({
       }
 
       if (field === "paymentReceivingBranch") {
-        return (
-          <select
-            id={`cell-${shipment.shipmentId}-${field}`}
-            value={val !== null && val !== undefined ? String(val) : ""}
-            onChange={(e) => onChangeRow?.(shipment.shipmentId, field, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-            data-shipment-id={shipment.shipmentId}
-            data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none cursor-pointer transition-colors ${borderClass}`}
-          >
-            <option value="">Select...</option>
-            <option value="From Company">From Branch</option>
-            <option value="To Company">To Branch</option>
-          </select>
-        );
+        const isEditingCell = editingCell?.shipmentId === shipment.shipmentId && editingCell?.field === field;
+        if (isEditingCell) {
+          return (
+            <div className="w-full relative animate-fade-in">
+              <SearchableSelect
+                id={`cell-${shipment.shipmentId}-${field}`}
+                value={val !== null && val !== undefined ? String(val) : ""}
+                onChange={(newVal) => {
+                  onChangeRow?.(shipment.shipmentId, field, newVal);
+                  setEditingCell(null);
+                }}
+                onClose={() => setEditingCell(null)}
+                options={[
+                  { value: "From Company", label: "From Branch" },
+                  { value: "To Company", label: "To Branch" }
+                ]}
+                hideClearOption={false}
+              />
+            </div>
+          );
+        } else {
+          const displayVal = val === "From Company" ? "From Branch" : val === "To Company" ? "To Branch" : "Select...";
+          return (
+            <div
+              id={`cell-${shipment.shipmentId}-${field}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "F2") {
+                  e.preventDefault();
+                  setEditingCell({ shipmentId: shipment.shipmentId, field });
+                } else {
+                  handleKeyDown(e, shipment.shipmentId, field);
+                }
+              }}
+              onClick={() => setEditingCell({ shipmentId: shipment.shipmentId, field })}
+              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
+            >
+              <span className={!val ? "text-slate-500" : ""}>{displayVal}</span>
+            </div>
+          );
+        }
       }
 
       if (field === "packageType") {
@@ -676,61 +703,124 @@ export default function ShipmentTable({
       }
 
       if (field === "paymentStatus") {
-        return (
-          <select
-            id={`cell-${shipment.shipmentId}-${field}`}
-            value={val !== null && val !== undefined ? String(val) : "Pending"}
-            onChange={(e) => onChangeRow?.(shipment.shipmentId, field, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-            data-shipment-id={shipment.shipmentId}
-            data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none cursor-pointer transition-colors font-semibold ${borderClass}`}
-          >
-            <option value="Pending">Pending</option>
-            <option value="Paid">Paid</option>
-            <option value="Free">Free</option>
-          </select>
-        );
+        const isEditingCell = editingCell?.shipmentId === shipment.shipmentId && editingCell?.field === field;
+        if (isEditingCell) {
+          return (
+            <div className="w-full relative animate-fade-in">
+              <SearchableSelect
+                id={`cell-${shipment.shipmentId}-${field}`}
+                value={val !== null && val !== undefined ? String(val) : "Pending"}
+                onChange={(newVal) => {
+                  onChangeRow?.(shipment.shipmentId, field, newVal);
+                  setEditingCell(null);
+                }}
+                onClose={() => setEditingCell(null)}
+                options={PAYMENT_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
+                hideClearOption
+              />
+            </div>
+          );
+        } else {
+          return (
+            <div
+              id={`cell-${shipment.shipmentId}-${field}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "F2") {
+                  e.preventDefault();
+                  setEditingCell({ shipmentId: shipment.shipmentId, field });
+                } else {
+                  handleKeyDown(e, shipment.shipmentId, field);
+                }
+              }}
+              onClick={() => setEditingCell({ shipmentId: shipment.shipmentId, field })}
+              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors font-semibold flex items-center ${borderClass}`}
+            >
+              {val || "Pending"}
+            </div>
+          );
+        }
       }
+
       if (field === "deliveryStatus") {
-        return (
-          <select
-            id={`cell-${shipment.shipmentId}-${field}`}
-            value={val !== null && val !== undefined ? String(val) : "Not Delivered"}
-            onChange={(e) => onChangeRow?.(shipment.shipmentId, field, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-            data-shipment-id={shipment.shipmentId}
-            data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none cursor-pointer transition-colors font-semibold ${borderClass}`}
-          >
-            <option value="Not Delivered">Not Delivered</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Missing">Missing</option>
-            <option value="Damaged">Damaged</option>
-          </select>
-        );
+        const isEditingCell = editingCell?.shipmentId === shipment.shipmentId && editingCell?.field === field;
+        if (isEditingCell) {
+          return (
+            <div className="w-full relative animate-fade-in">
+              <SearchableSelect
+                id={`cell-${shipment.shipmentId}-${field}`}
+                value={val !== null && val !== undefined ? String(val) : "Not Delivered"}
+                onChange={(newVal) => {
+                  onChangeRow?.(shipment.shipmentId, field, newVal);
+                  setEditingCell(null);
+                }}
+                onClose={() => setEditingCell(null)}
+                options={DELIVERY_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
+                hideClearOption
+              />
+            </div>
+          );
+        } else {
+          return (
+            <div
+              id={`cell-${shipment.shipmentId}-${field}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "F2") {
+                  e.preventDefault();
+                  setEditingCell({ shipmentId: shipment.shipmentId, field });
+                } else {
+                  handleKeyDown(e, shipment.shipmentId, field);
+                }
+              }}
+              onClick={() => setEditingCell({ shipmentId: shipment.shipmentId, field })}
+              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors font-semibold flex items-center ${borderClass}`}
+            >
+              {val || "Not Delivered"}
+            </div>
+          );
+        }
       }
 
       switch (type) {
         case "select": {
-          return (
-            <select
-              id={`cell-${shipment.shipmentId}-${field}`}
-              value={val !== null && val !== undefined ? String(val) : ""}
-              onChange={(e) => onChangeRow?.(shipment.shipmentId, field, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-              data-shipment-id={shipment.shipmentId}
-              data-field={field}
-              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} cursor-pointer`}
-            >
-              <option value="">Select...</option>
-              {options?.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          );
+          const isEditingCell = editingCell?.shipmentId === shipment.shipmentId && editingCell?.field === field;
+          if (isEditingCell) {
+            return (
+              <div className="w-full relative animate-fade-in">
+                <SearchableSelect
+                  id={`cell-${shipment.shipmentId}-${field}`}
+                  value={val !== null && val !== undefined ? String(val) : ""}
+                  onChange={(newVal) => {
+                    onChangeRow?.(shipment.shipmentId, field, newVal);
+                    setEditingCell(null);
+                  }}
+                  onClose={() => setEditingCell(null)}
+                  options={(options || []).filter(opt => opt !== "").map(opt => ({ value: opt, label: opt }))}
+                  hideClearOption={!(options || []).includes("")}
+                />
+              </div>
+            );
+          } else {
+            return (
+              <div
+                id={`cell-${shipment.shipmentId}-${field}`}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === "F2") {
+                    e.preventDefault();
+                    setEditingCell({ shipmentId: shipment.shipmentId, field });
+                  } else {
+                    handleKeyDown(e, shipment.shipmentId, field);
+                  }
+                }}
+                onClick={() => setEditingCell({ shipmentId: shipment.shipmentId, field })}
+                className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
+              >
+                {val || "Select..."}
+              </div>
+            );
+          }
         }
         case "date":
           return (
@@ -953,30 +1043,13 @@ export default function ShipmentTable({
               </th>
               <th onClick={() => onSort("vehicleNumber")} className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer group select-none border-b border-slate-800" style={{ width: "110px", minWidth: "110px" }}>
                 <div className="flex items-center gap-1.5">
-                  Vehicle <SortIcon colKey="vehicleNumber" />
+                  Vehicle No <SortIcon colKey="vehicleNumber" />
                 </div>
               </th>
               <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "130px", minWidth: "130px" }}>From Branch</th>
               <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "240px", minWidth: "240px" }}>From Company</th>
               <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "130px", minWidth: "130px" }}>To Branch</th>
               <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "240px", minWidth: "240px" }}>To Company</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "200px", minWidth: "200px" }}>Package</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "90px", minWidth: "90px" }}>Qty</th>
-              <th onClick={() => onSort("transportRate")} className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer group select-none border-b border-slate-800 text-right" style={{ width: "120px", minWidth: "120px" }}>
-                <div className="flex items-center justify-end gap-1.5">
-                  Rate <SortIcon colKey="transportRate" />
-                </div>
-              </th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Price</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Pickup Service</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Pickup Charge</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "150px", minWidth: "150px" }}>Delivery Service</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Delivery Charge</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Total</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "130px", minWidth: "130px" }}>Pay Branch</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "240px", minWidth: "240px" }}>Pay Company</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-center border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Payment</th>
-              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-center border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Delivery</th>
               <th onClick={() => onSort("ourInvoiceNumber")} className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer group select-none border-b border-slate-800" style={{ width: "130px", minWidth: "130px" }}>
                 <div className="flex items-center gap-1.5">
                   Our Invoice <SortIcon colKey="ourInvoiceNumber" />
@@ -987,6 +1060,23 @@ export default function ShipmentTable({
                   Cust Invoice <SortIcon colKey="customerInvoiceNumber" />
                 </div>
               </th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "200px", minWidth: "200px" }}>Material</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "90px", minWidth: "90px" }}>Qty</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Pickup Service</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "150px", minWidth: "150px" }}>Delivery Service</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "130px", minWidth: "130px" }}>Pay Branch</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none border-b border-slate-800" style={{ width: "240px", minWidth: "240px" }}>Pay Company</th>
+              <th onClick={() => onSort("transportRate")} className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer group select-none border-b border-slate-800 text-right" style={{ width: "120px", minWidth: "120px" }}>
+                <div className="flex items-center justify-end gap-1.5">
+                  Transport Rate <SortIcon colKey="transportRate" />
+                </div>
+              </th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Pickup Charge</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Delivery Charge</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Price Per Material</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-right border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Total Amount</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-center border-b border-slate-800" style={{ width: "140px", minWidth: "140px" }}>Delivery Status</th>
+              <th className="sticky top-0 bg-slate-950 z-20 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-center border-b border-slate-800" style={{ width: "120px", minWidth: "120px" }}>Payment Status</th>
               <th className="sticky right-0 top-0 bg-slate-950 z-30 py-4 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none text-center border-b border-slate-800 border-l border-slate-800 shadow-[-4px_0_12px_rgba(0,0,0,0.5)]" style={{ width: "120px", minWidth: "120px" }}>Actions</th>
             </tr>
           </thead>
@@ -1103,34 +1193,24 @@ export default function ShipmentTable({
                     <td className="py-[4px] px-3 align-middle" style={{ width: "240px", minWidth: "240px" }}>
                       {renderCell(shipment, "toCompany", "select", toAmtCompanies)}
                     </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
+                      {renderCell(shipment, "ourInvoiceNumber", "text")}
+                    </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "150px", minWidth: "150px" }}>
+                      {renderCell(shipment, "customerInvoiceNumber", "text")}
+                    </td>
                     <td className="py-[4px] px-3 align-middle" style={{ width: "200px", minWidth: "200px" }}>
                       {renderCell(shipment, "packageType", "select", activePackagesList)}
                     </td>
                     <td className="py-[4px] px-3 align-middle" style={{ width: "90px", minWidth: "90px" }}>
                       {renderCell(shipment, "quantity", "text")}
                     </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
-                      {renderCell(shipment, "transportRate", "number")}
-                    </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
-                      {renderCell(shipment, "pricePerPiece", "number")}
-                    </td>
                     <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
                       {renderCell(shipment, "pickupService", "select", ["Branch", "Home", "Free Home"])}
-                    </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
-                      {renderCell(shipment, "pickupCharge", "number")}
                     </td>
                     <td className="py-[4px] px-3 align-middle" style={{ width: "150px", minWidth: "150px" }}>
                       {renderCell(shipment, "deliveryService", "select", ["Branch", "Home", "Free Home"])}
                     </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
-                      {renderCell(shipment, "deliveryCharge", "number")}
-                    </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
-                      {renderCell(shipment, "totalAmount", "number")}
-                    </td>
-                    {/* Pay Branch & Pay Company renders */}
                     <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
                       {renderCell(shipment, "paymentReceivingBranch", "select", ["From Company", "To Company"])}
                     </td>
@@ -1142,17 +1222,26 @@ export default function ShipmentTable({
                         Array.from(new Set(companies.map((c) => c.companyName)))
                       )}
                     </td>
-                    <td className="py-[4px] px-3 text-center align-middle" style={{ width: "120px", minWidth: "120px" }}>
-                      {renderCell(shipment, "paymentStatus", "badge")}
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+                      {renderCell(shipment, "transportRate", "number")}
+                    </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+                      {renderCell(shipment, "pickupCharge", "number")}
+                    </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+                      {renderCell(shipment, "deliveryCharge", "number")}
+                    </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
+                      {renderCell(shipment, "pricePerPiece", "number")}
+                    </td>
+                    <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
+                      {renderCell(shipment, "totalAmount", "number")}
                     </td>
                     <td className="py-[4px] px-3 text-center align-middle" style={{ width: "140px", minWidth: "140px" }}>
                       {renderCell(shipment, "deliveryStatus", "badge")}
                     </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
-                      {renderCell(shipment, "ourInvoiceNumber", "text")}
-                    </td>
-                    <td className="py-[4px] px-3 align-middle" style={{ width: "150px", minWidth: "150px" }}>
-                      {renderCell(shipment, "customerInvoiceNumber", "text")}
+                    <td className="py-[4px] px-3 text-center align-middle" style={{ width: "120px", minWidth: "120px" }}>
+                      {renderCell(shipment, "paymentStatus", "badge")}
                     </td>
                     <td className="sticky right-0 bg-slate-955/95 backdrop-blur-sm py-[4px] px-3 align-middle text-center border-l border-slate-800 z-10 shadow-[-4px_0_12px_rgba(0,0,0,0.5)]" style={{ width: "120px", minWidth: "120px" }}>
                       <div className="flex items-center justify-center gap-2">

@@ -25,21 +25,21 @@ export const EDITABLE_COLUMNS: Array<keyof ShipmentRecord> = [
   "fromCompany",
   "toAmtBranch",
   "toCompany",
+  "ourInvoiceNumber",
+  "customerInvoiceNumber",
   "packageType",
   "quantity",
-  "transportRate",
-  "pricePerPiece",
   "pickupService",
-  "pickupCharge",
   "deliveryService",
-  "deliveryCharge",
-  "totalAmount",
   "paymentReceivingBranch",
   "paymentCompany",
-  "paymentStatus",
+  "transportRate",
+  "pickupCharge",
+  "deliveryCharge",
+  "pricePerPiece",
+  "totalAmount",
   "deliveryStatus",
-  "ourInvoiceNumber",
-  "customerInvoiceNumber"
+  "paymentStatus"
 ];
 
 import ShipmentTable from "./ShipmentTable";
@@ -48,6 +48,16 @@ import Pagination from "./Pagination";
 import ShipmentModal from "./ShipmentModal";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ImageViewerModal from "./ImageViewerModal";
+
+const DRAFT_STORAGE_KEY = "tms_shipments_spreadsheet_draft";
+
+interface SpreadsheetDraft {
+  version: 1;
+  mode: "spreadsheet";
+  editedRows: Record<string, { original: ShipmentRecord; current: ShipmentRecord }>;
+  manualOverrides: Record<string, string[]>;
+  timestamp: number;
+}
 import ShipmentToolbar from "./ShipmentToolbar";
 import WorkspaceDashboard from "./WorkspaceDashboard";
 
@@ -201,9 +211,114 @@ export default function ShipmentWorkspace({
   const [editedRows, setEditedRows] = useState<Record<string, { original: ShipmentRecord; current: ShipmentRecord }>>({});
   const [saving, setSaving] = useState<boolean>(false);
 
-  // Auto Fill & Manual Override tracking states
   const [manualOverrides, setManualOverrides] = useState<Record<string, Set<string>>>({});
   const [highlightedCells, setHighlightedCells] = useState<Record<string, Set<string>>>({});
+
+  const draftRestoredRef = useRef<boolean>(false);
+
+  // Restore unsaved spreadsheet draft from localStorage on initial client mount
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+
+    try {
+      if (typeof window === "undefined") return;
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (
+        parsed &&
+        parsed.version === 1 &&
+        parsed.mode === "spreadsheet" &&
+        parsed.editedRows &&
+        typeof parsed.editedRows === "object" &&
+        Object.keys(parsed.editedRows).length > 0
+      ) {
+        const validEdits: Record<string, { original: ShipmentRecord; current: ShipmentRecord }> = {};
+        for (const [id, val] of Object.entries(parsed.editedRows)) {
+          const item = val as any;
+          if (
+            item &&
+            item.original &&
+            item.current &&
+            typeof item.original === "object" &&
+            typeof item.current === "object" &&
+            item.original.shipmentId &&
+            item.current.shipmentId
+          ) {
+            validEdits[id] = {
+              original: item.original,
+              current: item.current,
+            };
+          }
+        }
+
+        if (Object.keys(validEdits).length > 0) {
+          setMode("spreadsheet");
+          setEditedRows(validEdits);
+
+          // Restore manual overrides
+          if (parsed.manualOverrides && typeof parsed.manualOverrides === "object") {
+            const restoredOverrides: Record<string, Set<string>> = {};
+            for (const [id, arr] of Object.entries(parsed.manualOverrides)) {
+              if (Array.isArray(arr)) {
+                restoredOverrides[id] = new Set(arr as string[]);
+              }
+            }
+            setManualOverrides(restoredOverrides);
+          }
+
+          // Apply restored edits to current shipments state if already loaded
+          setShipments((prev) =>
+            prev.map((s) => {
+              const editState = validEdits[s.shipmentId];
+              return editState ? { ...editState.current } : s;
+            })
+          );
+        } else {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } else {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    } catch (err) {
+      console.error("Error restoring spreadsheet draft from localStorage:", err);
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch (_) {}
+    }
+  }, []);
+
+  // Sync active spreadsheet draft to localStorage whenever editedRows, manualOverrides, or mode changes
+  useEffect(() => {
+    if (!draftRestoredRef.current) return;
+    if (typeof window === "undefined") return;
+
+    try {
+      if (Object.keys(editedRows).length > 0) {
+        const serializableOverrides: Record<string, string[]> = {};
+        Object.entries(manualOverrides).forEach(([id, set]) => {
+          if (set && set.size > 0) {
+            serializableOverrides[id] = Array.from(set);
+          }
+        });
+
+        const draft: SpreadsheetDraft = {
+          version: 1,
+          mode: "spreadsheet",
+          editedRows,
+          manualOverrides: serializableOverrides,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      } else {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    } catch (err) {
+      console.error("Error persisting spreadsheet draft to localStorage:", err);
+    }
+  }, [editedRows, manualOverrides, mode]);
 
   // Undo / Redo history stacks
   interface EditSnapshot {
@@ -1062,6 +1177,11 @@ export default function ShipmentWorkspace({
   const handleDiscardChanges = () => {
     if (Object.keys(editedRows).length === 0) return;
     if (confirm("Are you sure you want to discard all unsaved edits?")) {
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch (_) {}
       setUndoStack([]);
       setRedoStack([]);
       setEditedRows({});
@@ -1120,6 +1240,11 @@ export default function ShipmentWorkspace({
         console.log("=============================================================");
       }
 
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+      } catch (_) {}
       triggerToast(`Successfully saved updates to ${dirtyIds.length} shipments.`);
       setUndoStack([]);
       setRedoStack([]);

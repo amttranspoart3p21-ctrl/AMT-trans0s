@@ -55,6 +55,9 @@ export async function readGlobalRouteRates(): Promise<GlobalRouteRate[]> {
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
 
+    const status = (row.getCell(9).value?.toString() as GlobalRouteRate["status"]) ?? "Active";
+    const inactiveReason = row.getCell(12).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+
     rates.push({
       routeRateId: row.getCell(1).value?.toString() ?? "",
       fromBranchId: row.getCell(2).value?.toString() ?? "",
@@ -64,7 +67,8 @@ export async function readGlobalRouteRates(): Promise<GlobalRouteRate[]> {
       packageId: row.getCell(6).value?.toString() ?? "",
       packageName: row.getCell(7).value?.toString() ?? "",
       rate: Number(row.getCell(8).value) || 0,
-      status: (row.getCell(9).value?.toString() as GlobalRouteRate["status"]) ?? "Active",
+      status,
+      inactiveReason,
       createdAt: row.getCell(10).value?.toString() ?? "",
       updatedAt: row.getCell(11).value?.toString() ?? "",
     });
@@ -102,8 +106,10 @@ export async function writeGlobalRouteRates(rates: GlobalRouteRate[]): Promise<v
       status: rateItem.status,
       createdAt: rateItem.createdAt,
       updatedAt: rateItem.updatedAt,
+      inactiveReason: rateItem.inactiveReason,
     });
   });
 
   await workbook.xlsx.writeFile(ROUTE_RATE_FILE);
 }
+

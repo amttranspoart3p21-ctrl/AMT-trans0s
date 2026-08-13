@@ -26,4 +26,5 @@ export const COMPANY_COLUMNS: Partial<Column>[] = [
 
   { header: "Created At", key: "createdAt", width: 25 },
   { header: "Updated At", key: "updatedAt", width: 25 },
-];
+  { header: "Inactive Reason", key: "inactiveReason", width: 25 },
+];

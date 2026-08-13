@@ -1,3 +1,7 @@
+export interface PackageStatsData {
+  routeRates: number;
+}
+
 export interface Package {
   packageId: string;
 
@@ -9,7 +13,10 @@ export interface Package {
   description?: string;
 
   status: "Active" | "Inactive";
+  inactiveReason?: string;
 
   createdAt: string;
   updatedAt: string;
-}
+
+  stats?: PackageStatsData;
+}

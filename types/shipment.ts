@@ -30,6 +30,21 @@ export interface Shipment {
   paymentStatus: "Pending" | "Paid" | "Free";
 }
 
+/** Single source of truth for Payment Status dropdown options */
+export const PAYMENT_STATUS_OPTIONS: Shipment["paymentStatus"][] = [
+  "Pending",
+  "Paid",
+  "Free",
+] as const;
+
+/** Single source of truth for Delivery Status dropdown options */
+export const DELIVERY_STATUS_OPTIONS: Shipment["deliveryStatus"][] = [
+  "Not Delivered",
+  "Delivered",
+  "Missing",
+  "Damaged",
+] as const;
+
 export interface ShipmentRecord extends Shipment {
   shipmentId: string;
   totalAmount: number | null;

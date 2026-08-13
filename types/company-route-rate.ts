@@ -18,7 +18,9 @@ export interface CompanyRouteRate {
   deliveryCharge: number;
 
   status: "Active" | "Inactive";
+  inactiveReason?: string;
 
   createdAt: string;
   updatedAt: string;
 }
+

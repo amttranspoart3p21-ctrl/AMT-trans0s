@@ -55,6 +55,9 @@ export async function readCompanyRouteRates(): Promise<CompanyRouteRate[]> {
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
 
+    const status = (row.getCell(13).value?.toString() as CompanyRouteRate["status"]) ?? "Active";
+    const inactiveReason = row.getCell(16).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+
     rates.push({
       companyRouteRateId: row.getCell(1).value?.toString() ?? "",
       companyId: row.getCell(2).value?.toString() ?? "",
@@ -68,7 +71,8 @@ export async function readCompanyRouteRates(): Promise<CompanyRouteRate[]> {
       transportRate: Number(row.getCell(10).value) || 0,
       pickupCharge: Number(row.getCell(11).value) || 0,
       deliveryCharge: Number(row.getCell(12).value) || 0,
-      status: (row.getCell(13).value?.toString() as CompanyRouteRate["status"]) ?? "Active",
+      status,
+      inactiveReason,
       createdAt: row.getCell(14).value?.toString() ?? "",
       updatedAt: row.getCell(15).value?.toString() ?? "",
     });
@@ -110,8 +114,10 @@ export async function writeCompanyRouteRates(rates: CompanyRouteRate[]): Promise
       status: rateItem.status,
       createdAt: rateItem.createdAt,
       updatedAt: rateItem.updatedAt,
+      inactiveReason: rateItem.inactiveReason,
     });
   });
 
   await workbook.xlsx.writeFile(COMPANY_ROUTE_RATE_FILE);
 }
+

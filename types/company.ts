@@ -1,3 +1,8 @@
+export interface CompanyStatsData {
+  companyPackages: number;
+  companyRouteRates: number;
+}
+
 export interface Company {
   companyId: string;   
 
@@ -17,7 +22,10 @@ export interface Company {
   gstNumber?: string;    // optional
 
   status: "Active" | "Inactive"; // requred
+  inactiveReason?: string;
 
   createdAt: string;
   updatedAt: string;
-}
+
+  stats?: CompanyStatsData;
+}

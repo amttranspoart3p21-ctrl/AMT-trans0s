@@ -21,7 +21,7 @@ export function validateBranch(
     errors.push("Phone Number 1 is required.");
   }
 
-  if (!["Active", "Shutdown"].includes(branch.status)) {
+  if (!["Active", "Inactive", "Shutdown"].includes(branch.status)) {
     errors.push("Invalid Branch Status.");
   }
 

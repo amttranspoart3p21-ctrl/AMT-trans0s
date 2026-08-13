@@ -228,13 +228,17 @@ export async function readPackages(): Promise<Package[]> {
     // Skip the header row
     if (rowNumber === 1) return;
 
+    const status = (row.getCell(6).value?.toString() as Package["status"]) ?? "Active";
+    const inactiveReason = row.getCell(9).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+
     packages.push({
       packageId: row.getCell(1).value?.toString() ?? "",
       packageName: row.getCell(2).value?.toString() ?? "",
       companyId: row.getCell(3).value?.toString() || undefined,
       companyName: row.getCell(4).value?.toString() || undefined,
       description: row.getCell(5).value?.toString() || undefined,
-      status: (row.getCell(6).value?.toString() as Package["status"]) ?? "Active",
+      status,
+      inactiveReason,
       createdAt: row.getCell(7).value?.toString() ?? "",
       updatedAt: row.getCell(8).value?.toString() ?? "",
     });
@@ -271,8 +275,9 @@ export async function writePackages(packages: Package[]): Promise<void> {
       status: pkg.status,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
+      inactiveReason: pkg.inactiveReason,
     });
   });
 
   await workbook.xlsx.writeFile(PACKAGE_FILE);
-}
+}

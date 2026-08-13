@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import AdminLayout from "@/components/layout/AdminLayout";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -59,9 +60,6 @@ interface CompanyFormProps {
   branches: Branch[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>, field: keyof CompanyFormData) => void;
   onSelectBranch: (branchId: string) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, field: keyof CompanyFormData) => void;
-  onFocus: (e: React.FocusEvent<HTMLInputElement>, field: keyof CompanyFormData) => void;
-  onMouseDown: (e: React.MouseEvent<HTMLInputElement>, field: keyof CompanyFormData) => void;
   onStatusChange: (status: "Active" | "Inactive") => void;
 }
 
@@ -75,9 +73,6 @@ function CompanyForm({
   branches,
   onChange,
   onSelectBranch,
-  onKeyDown,
-  onFocus,
-  onMouseDown,
   onStatusChange,
 }: CompanyFormProps) {
   return (
@@ -115,9 +110,6 @@ function CompanyForm({
           placeholder="e.g. Acme Logistics"
           value={formData.companyName}
           onChange={(e) => onChange(e, "companyName")}
-          onKeyDown={(e) => onKeyDown(e, "companyName")}
-          onFocus={(e) => onFocus(e, "companyName")}
-          onMouseDown={(e) => onMouseDown(e, "companyName")}
         />
         <Input
           label="Email (Optional)"
@@ -125,9 +117,6 @@ function CompanyForm({
           type="email"
           value={formData.email}
           onChange={(e) => onChange(e, "email")}
-          onKeyDown={(e) => onKeyDown(e, "email")}
-          onFocus={(e) => onFocus(e, "email")}
-          onMouseDown={(e) => onMouseDown(e, "email")}
         />
       </div>
 
@@ -136,9 +125,6 @@ function CompanyForm({
         placeholder="Full company address"
         value={formData.address}
         onChange={(e) => onChange(e, "address")}
-        onKeyDown={(e) => onKeyDown(e, "address")}
-        onFocus={(e) => onFocus(e, "address")}
-        onMouseDown={(e) => onMouseDown(e, "address")}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -147,27 +133,18 @@ function CompanyForm({
           placeholder="+91 99XXX XXXXX"
           value={formData.phoneNumber1}
           onChange={(e) => onChange(e, "phoneNumber1")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber1")}
-          onFocus={(e) => onFocus(e, "phoneNumber1")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber1")}
         />
         <Input
           label="Phone Number 2 (Optional)"
           placeholder="Optional"
           value={formData.phoneNumber2}
           onChange={(e) => onChange(e, "phoneNumber2")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber2")}
-          onFocus={(e) => onFocus(e, "phoneNumber2")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber2")}
         />
         <Input
           label="Phone Number 3 (Optional)"
           placeholder="Optional"
           value={formData.phoneNumber3}
           onChange={(e) => onChange(e, "phoneNumber3")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber3")}
-          onFocus={(e) => onFocus(e, "phoneNumber3")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber3")}
         />
       </div>
 
@@ -177,9 +154,6 @@ function CompanyForm({
           placeholder="e.g. 33AAAAA0000A1Z5"
           value={formData.gstNumber}
           onChange={(e) => onChange(e, "gstNumber")}
-          onKeyDown={(e) => onKeyDown(e, "gstNumber")}
-          onFocus={(e) => onFocus(e, "gstNumber")}
-          onMouseDown={(e) => onMouseDown(e, "gstNumber")}
         />
 
         <div className="flex flex-col gap-1.5">
@@ -340,7 +314,9 @@ function SearchableBranchDropdown({
    ============================================================ */
 
 export default function CompaniesPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("management");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
 
   // ── Dashboard state ──
   const [stats, setStats] = useState<CompanyStats>({
@@ -362,7 +338,7 @@ export default function CompaniesPage() {
   });
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [branchFilter, setBranchFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState(searchParams.get("branchId") || "");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState("");
@@ -371,10 +347,12 @@ export default function CompaniesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [deleteCompany, setDeleteCompany] = useState<Company | null>(null);
+  const [inactiveCompanyTarget, setInactiveCompanyTarget] = useState<Company | null>(null);
   const [formData, setFormData] = useState<CompanyFormData>(emptyForm);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
 
   // ── Toast/Feedback ──
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -591,7 +569,12 @@ export default function CompaniesPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to delete company.");
 
-      showToast("Company deleted successfully!");
+      const d = json.deleted;
+      const msg = d
+        ? `Company deleted! (Packages: ${d.packages}, Co. Rates: ${d.companyRouteRates})`
+        : "Company deleted successfully!";
+
+      showToast(msg);
       setDeleteCompany(null);
       fetchCompanies();
       fetchStats();
@@ -602,39 +585,79 @@ export default function CompaniesPage() {
     }
   };
 
-  // Toggle status: PUT /api/companies/[companyId] with toggled status
-  const handleToggleStatus = async (company: Company) => {
-    setTogglingId(company.companyId);
+  // Cascade Inactive company: PUT /api/companies/[companyId] with status Inactive
+  const handleConfirmInactive = async () => {
+    if (!inactiveCompanyTarget) return;
+    setSubmitting(true);
     try {
-      const newStatus = company.status === "Active" ? "Inactive" : "Active";
-      const res = await fetch(`/api/companies/${company.companyId}`, {
+      const res = await fetch(`/api/companies/${inactiveCompanyTarget.companyId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branchId: company.branchId,
-          branchName: company.branchName,
-          companyName: company.companyName,
-          address: company.address,
-          phoneNumber1: company.phoneNumber1,
-          phoneNumber2: company.phoneNumber2 || "",
-          phoneNumber3: company.phoneNumber3 || "",
-          email: company.email || "",
-          gstNumber: company.gstNumber || "",
-          status: newStatus,
+          branchId: inactiveCompanyTarget.branchId,
+          branchName: inactiveCompanyTarget.branchName,
+          companyName: inactiveCompanyTarget.companyName,
+          address: inactiveCompanyTarget.address,
+          phoneNumber1: inactiveCompanyTarget.phoneNumber1,
+          status: "Inactive",
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to update status.");
+      if (!res.ok) throw new Error(json.message || "Failed to inactivate company.");
 
-      showToast(`Company status changed to ${newStatus}.`);
+      const u = json.updated;
+      const msg = u
+        ? `Company & dependents marked inactive! (Packages: ${u.packages}, Co. Rates: ${u.companyRouteRates})`
+        : "Company and related records marked inactive.";
+
+      showToast(msg);
+      setInactiveCompanyTarget(null);
       fetchCompanies();
       fetchStats();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      showToast(err instanceof Error ? err.message : "Failed to inactivate company.", "error");
     } finally {
-      setTogglingId(null);
+      setSubmitting(false);
     }
   };
+
+  // Toggle status: show Inactive modal if active, else directly activate
+  const handleToggleStatus = async (company: Company) => {
+    if (company.status === "Active") {
+      setInactiveCompanyTarget(company);
+    } else {
+      setTogglingId(company.companyId);
+      try {
+        const res = await fetch(`/api/companies/${company.companyId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchId: company.branchId,
+            branchName: company.branchName,
+            companyName: company.companyName,
+            address: company.address,
+            phoneNumber1: company.phoneNumber1,
+            status: "Active",
+          }),
+        });
+        const json = await res.json();
+        const u = json.updated;
+        const msg = u
+          ? `Company & dependents marked active! (Packages: ${u.packages}, Co. Rates: ${u.companyRouteRates})`
+          : "Company status changed to Active.";
+
+        showToast(msg);
+
+        fetchCompanies();
+        fetchStats();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      } finally {
+        setTogglingId(null);
+      }
+    }
+  };
+
 
   /* ============================================================
      Effects & Event Handlers
@@ -644,6 +667,15 @@ export default function CompaniesPage() {
     fetchBranches();
     fetchStats();
   }, [fetchBranches, fetchStats]);
+
+  useEffect(() => {
+    const bId = searchParams.get("branchId");
+    if (bId) {
+      setBranchFilter(bId);
+      // Optional: switch to management tab if not there
+      setActiveTab("management");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchCompanies();
@@ -663,11 +695,8 @@ export default function CompaniesPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, [statusFilter, branchFilter]);
 
-  // Synchronous focus lock for space key on inputs
-  const lockedFieldsRef = useRef<Record<string, boolean>>({});
 
   const openEditModal = (company: Company) => {
-    lockedFieldsRef.current = {};
     setFormData({
       branchId: company.branchId,
       companyName: company.companyName || "",
@@ -684,7 +713,6 @@ export default function CompaniesPage() {
   };
 
   const openCreateModal = () => {
-    lockedFieldsRef.current = {};
     setFormData(emptyForm);
     setFormErrors([]);
     setCreateOpen(true);
@@ -696,35 +724,6 @@ export default function CompaniesPage() {
   ) => {
     let val = e.target.value;
     setFormData((prev) => ({ ...prev, [field]: val }));
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    field: keyof CompanyFormData
-  ) => {
-    if (e.key === " " || e.code === "Space") {
-      e.preventDefault();
-      lockedFieldsRef.current[field] = true;
-      let val = (formData[field] || "") + " ";
-      setFormData((prev) => ({ ...prev, [field]: val }));
-      e.currentTarget.blur();
-    }
-  };
-
-  const handleFocus = (
-    e: React.FocusEvent<HTMLInputElement>,
-    field: keyof CompanyFormData
-  ) => {
-    if (lockedFieldsRef.current[field]) {
-      e.currentTarget.blur();
-    }
-  };
-
-  const handleMouseDown = (
-    e: React.MouseEvent<HTMLInputElement>,
-    field: keyof CompanyFormData
-  ) => {
-    lockedFieldsRef.current[field] = false;
   };
 
   /* ============================================================
@@ -813,21 +812,6 @@ export default function CompaniesPage() {
         <div className="flex border-b border-slate-800 mb-8 gap-8">
           <button
             type="button"
-            onClick={() => setActiveTab("management")}
-            className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
-              activeTab === "management"
-                ? "text-violet-400"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Company Management
-            {activeTab === "management" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
-            )}
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab("dashboard")}
             className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
               activeTab === "dashboard"
@@ -837,6 +821,21 @@ export default function CompaniesPage() {
           >
             Company Dashboard
             {activeTab === "dashboard" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("management")}
+            className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+              activeTab === "management"
+                ? "text-violet-400"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Company Management
+            {activeTab === "management" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
             )}
           </button>
@@ -944,6 +943,23 @@ export default function CompaniesPage() {
                   <option value="Active">Active Status</option>
                   <option value="Inactive">Inactive Status</option>
                 </select>
+                
+                {/* Clear All Filters Button */}
+                {(searchInput || branchFilter || statusFilter !== "All") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput("");
+                      setSearch("");
+                      setBranchFilter("");
+                      setStatusFilter("All");
+                      setPagination(prev => ({ ...prev, page: 1 }));
+                    }}
+                    className="shrink-0 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1006,7 +1022,8 @@ export default function CompaniesPage() {
                   {companies.map((company) => (
                     <div
                       key={company.companyId}
-                      className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-slate-700 transition-all group relative overflow-hidden"
+                      onClick={() => router.push(`/packages?companyId=${company.companyId}`)}
+                      className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-slate-700 hover:bg-slate-800/40 transition-all group relative overflow-hidden cursor-pointer"
                     >
                       {/* Top Header */}
                       <div>
@@ -1066,6 +1083,18 @@ export default function CompaniesPage() {
                             </p>
                           )}
                         </div>
+
+                        {/* Stats Section */}
+                        <div className="mt-4 pt-3 border-t border-slate-800/60 grid grid-cols-1 gap-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Company Packages</span>
+                            <span className="font-bold text-slate-200">{company.stats?.companyPackages ?? 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Company Route Rates</span>
+                            <span className="font-bold text-slate-200">{company.stats?.companyRouteRates ?? 0}</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Card Actions Footer */}
@@ -1074,25 +1103,23 @@ export default function CompaniesPage() {
                         <button
                           type="button"
                           disabled={togglingId === company.companyId}
-                          onClick={() => handleToggleStatus(company)}
-                          className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                            company.status === "Active"
-                              ? "bg-slate-950 border-amber-500/30 text-amber-400 hover:bg-amber-950/30"
-                              : "bg-slate-950 border-emerald-500/30 text-emerald-400 hover:bg-emerald-950/30"
-                          }`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(company); }}
+                          className="relative inline-flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={`Switch to ${company.status === "Active" ? "Inactive" : "Active"}`}
                         >
-                          {togglingId === company.companyId
-                            ? "Updating..."
-                            : company.status === "Active"
-                            ? "Set Inactive"
-                            : "Set Active"}
+                          <div className={`w-9 h-5 rounded-full transition-colors duration-300 ${company.status === "Active" ? "bg-emerald-600" : "bg-slate-700"}`}>
+                            <div className={`w-3.5 h-3.5 mt-[3px] rounded-full bg-white shadow transition-transform duration-300 ${company.status === "Active" ? "translate-x-[19px]" : "translate-x-[3px]"}`} />
+                          </div>
+                          <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            {togglingId === company.companyId ? "..." : company.status === "Active" ? "ON" : "OFF"}
+                          </span>
                         </button>
 
                         <div className="flex items-center gap-1.5">
                           {/* Edit Button */}
                           <button
                             type="button"
-                            onClick={() => openEditModal(company)}
+                            onClick={(e) => { e.stopPropagation(); openEditModal(company); }}
                             className="p-2 rounded-xl text-slate-400 hover:text-violet-300 hover:bg-violet-950/40 border border-transparent hover:border-violet-500/30 transition-all cursor-pointer"
                             title="Edit Company"
                           >
@@ -1104,7 +1131,7 @@ export default function CompaniesPage() {
                           {/* Delete Button */}
                           <button
                             type="button"
-                            onClick={() => setDeleteCompany(company)}
+                            onClick={(e) => { e.stopPropagation(); setDeleteCompany(company); }}
                             className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 transition-all cursor-pointer"
                             title="Delete Company"
                           >
@@ -1165,9 +1192,6 @@ export default function CompaniesPage() {
             branches={branches}
             onChange={handleTextChange}
             onSelectBranch={(bId) => setFormData((prev) => ({ ...prev, branchId: bId }))}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -1195,9 +1219,6 @@ export default function CompaniesPage() {
             branches={branches}
             onChange={handleTextChange}
             onSelectBranch={(bId) => setFormData((prev) => ({ ...prev, branchId: bId }))}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -1206,29 +1227,61 @@ export default function CompaniesPage() {
         <Modal
           isOpen={!!deleteCompany}
           onClose={() => setDeleteCompany(null)}
-          title="Delete Company"
-          size="sm"
+          title={`Delete ${deleteCompany?.companyName || "Company"}?`}
+          size="md"
           footer={
             <>
               <Button variant="secondary" size="sm" onClick={() => setDeleteCompany(null)}>
                 Cancel
               </Button>
               <Button variant="danger" size="sm" loading={submitting} onClick={handleDelete}>
-                Delete Company
+                Delete
               </Button>
             </>
           }
         >
-          <div className="flex flex-col gap-3 py-2 text-slate-300 text-xs">
-            <p>
-              Are you sure you want to delete{" "}
-              <strong className="text-slate-100 font-bold">
-                {deleteCompany?.companyName} ({deleteCompany?.branchCode})
-              </strong>
-              ?
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Deleting this company will also permanently delete:
             </p>
-            <p className="text-[11px] text-rose-450 font-medium">
-              This action cannot be undone. All company associations will be permanently removed.
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>All packages/special packages belonging to this company</li>
+              <li>All company route rates belonging to this company/packages</li>
+            </ul>
+            <p className="text-rose-400 font-bold mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+        </Modal>
+
+        {/* Inactive Confirmation Modal */}
+        <Modal
+          isOpen={!!inactiveCompanyTarget}
+          onClose={() => setInactiveCompanyTarget(null)}
+          title={`Make ${inactiveCompanyTarget?.companyName || "Company"} Inactive?`}
+          size="md"
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setInactiveCompanyTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" loading={submitting} onClick={handleConfirmInactive}>
+                Make Inactive
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Making this company inactive will also make the following inactive:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>{inactiveCompanyTarget?.companyName}</li>
+              <li>All packages/special packages belonging to {inactiveCompanyTarget?.companyName}</li>
+              <li>All company route rates belonging to {inactiveCompanyTarget?.companyName}/packages</li>
+            </ul>
+            <p className="text-emerald-400 font-bold mt-2">
+              No data will be deleted.
             </p>
           </div>
         </Modal>
@@ -1236,3 +1289,4 @@ export default function CompaniesPage() {
     </AdminLayout>
   );
 }
+

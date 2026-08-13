@@ -13,7 +13,8 @@ export interface GlobalRouteRate {
   rate: number;
 
   status: "Active" | "Inactive";
+  inactiveReason?: string;
 
   createdAt: string;
   updatedAt: string;
-}
+}

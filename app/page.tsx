@@ -35,7 +35,7 @@ export default function Dashboard() {
 
   // Upload States
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [activeFilename, setActiveFilename] = useState<string>("sample.jpg");
+  const [activeFilename, setActiveFilename] = useState<string>("");
   const [uploading, setUploading] = useState(false);
 
   // Entry Mode States
@@ -446,8 +446,8 @@ export default function Dashboard() {
           year: new Date().getFullYear(),
           month: new Date().toLocaleString("default", { month: "long" }),
           shipments: shipmentsToSave,
-          imageFileName: activeFilename !== "sample.jpg" ? activeFilename : undefined,
-          uploadSessionId: activeFilename !== "sample.jpg"
+          imageFileName: activeFilename ? activeFilename : undefined,
+          uploadSessionId: activeFilename
             ? `US-${activeFilename.split("-")[0]}`
             : `US-MANUAL-${Date.now()}`,
         }),
@@ -467,7 +467,7 @@ export default function Dashboard() {
         setCoordinates({});
         // AI state cleanups removed
         setUploadFile(null);
-        setActiveFilename("sample.jpg");
+        setActiveFilename("");
         setMetadata({
           date: "",
           ourInvoiceNumber: "",
@@ -490,7 +490,7 @@ export default function Dashboard() {
       setCoordinates({});
       // AI state cleanups removed
       setUploadFile(null);
-      setActiveFilename("sample.jpg");
+      setActiveFilename("");
       setSaveResult(null);
       setErrorMsg("");
       setIsManualWorkspace(false);
@@ -613,10 +613,12 @@ export default function Dashboard() {
             <div className="h-6 w-px bg-slate-800"></div>
             <div>
               <h1 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <span>OCR Review Screen</span>
-                <span className="text-[10px] font-mono font-normal text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 max-w-[150px] truncate">
-                  {activeFilename}
-                </span>
+                <span>{entryMode === "manual" ? "Manual Entry Workspace" : "OCR Review Screen"}</span>
+                {entryMode === "ocr" && activeFilename && (
+                  <span className="text-[10px] font-mono font-normal text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 max-w-[150px] truncate">
+                    {activeFilename}
+                  </span>
+                )}
                 {loading && (
                   <span className="inline-flex items-center gap-1.5 text-[10px] text-violet-400 bg-violet-500/10 border border-violet-500/25 px-2 py-0.5 rounded-full animate-pulse font-normal">
                     <svg className="animate-spin h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24">
@@ -645,28 +647,30 @@ export default function Dashboard() {
 
           {/* Actions */}
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => handleRunOCR()}
-              disabled={loading || saving || !isBranchSelectionValid}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/50 text-slate-355 hover:text-white text-xs font-semibold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
-                  </svg>
-                  <span>Run OCR</span>
-                </>
-              )}
-            </button>
+            {entryMode === "ocr" && (
+              <button
+                onClick={() => handleRunOCR()}
+                disabled={loading || saving || !isBranchSelectionValid}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/50 text-slate-355 hover:text-white text-xs font-semibold rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
+                    </svg>
+                    <span>Run OCR</span>
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={handleSaveAll}
               disabled={saving || !isBranchSelectionValid}
@@ -1000,7 +1004,11 @@ export default function Dashboard() {
         {/* Entry Mode Toggle */}
         <div className="flex bg-slate-900/60 border border-slate-800 rounded-xl p-1 shadow-lg backdrop-blur-md">
           <button
-            onClick={() => setEntryMode("ocr")}
+            onClick={() => {
+              setEntryMode("ocr");
+              setUploadFile(null);
+              setActiveFilename("");
+            }}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
               entryMode === "ocr" ? "bg-violet-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
             }`}
@@ -1008,7 +1016,11 @@ export default function Dashboard() {
             <span>📷</span> OCR Upload
           </button>
           <button
-            onClick={() => setEntryMode("manual")}
+            onClick={() => {
+              setEntryMode("manual");
+              setUploadFile(null);
+              setActiveFilename("");
+            }}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
               entryMode === "manual" ? "bg-violet-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
             }`}

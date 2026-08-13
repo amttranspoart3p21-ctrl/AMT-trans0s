@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import AdminLayout from "@/components/layout/AdminLayout";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -108,7 +109,9 @@ function SearchableCompanyDropdown({
         className="w-full flex items-center justify-between gap-2 text-xs rounded-xl px-4 py-2.5 outline-none transition-colors border border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-700 cursor-pointer"
       >
         <span className="truncate font-medium">
-          {selectedCompany
+          {selectedCompanyId === "GLOBAL"
+            ? "Global Packages"
+            : selectedCompany
             ? `${selectedCompany.companyName} (${selectedCompany.branchCode || selectedCompany.branchName})`
             : allowAll
             ? "All Companies"
@@ -139,21 +142,38 @@ function SearchableCompanyDropdown({
 
           <div className="overflow-y-auto flex-1 p-1">
             {allowAll && (
-              <button
-                type="button"
-                onClick={() => {
-                  onSelect("");
-                  setIsOpen(false);
-                  setSearchQuery("");
-                }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
-                  selectedCompanyId === ""
-                    ? "bg-violet-600/20 text-violet-300 font-bold"
-                    : "text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                All Companies
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect("");
+                    setIsOpen(false);
+                    setSearchQuery("");
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
+                    selectedCompanyId === ""
+                      ? "bg-violet-600/20 text-violet-300 font-bold"
+                      : "text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  All Companies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect("GLOBAL");
+                    setIsOpen(false);
+                    setSearchQuery("");
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer ${
+                    selectedCompanyId === "GLOBAL"
+                      ? "bg-violet-600/20 text-violet-300 font-bold"
+                      : "text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  Global Packages
+                </button>
+              </>
             )}
 
             {filteredCompanies.length === 0 ? (
@@ -204,9 +224,6 @@ interface PackageFormProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>, field: keyof PackageFormData) => void;
   onSelectCompany: (companyId: string) => void;
   onScopeChange: (scope: PackageScopeCategory) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, field: keyof PackageFormData) => void;
-  onFocus: (e: React.FocusEvent<HTMLInputElement>, field: keyof PackageFormData) => void;
-  onMouseDown: (e: React.MouseEvent<HTMLInputElement>, field: keyof PackageFormData) => void;
   onStatusChange: (status: "Active" | "Inactive") => void;
 }
 
@@ -218,9 +235,6 @@ function PackageForm({
   onChange,
   onSelectCompany,
   onScopeChange,
-  onKeyDown,
-  onFocus,
-  onMouseDown,
   onStatusChange,
 }: PackageFormProps) {
   return (
@@ -289,9 +303,6 @@ function PackageForm({
         placeholder="e.g. Box 4x4, Roll, Machine Parts"
         value={formData.packageName}
         onChange={(e) => onChange(e, "packageName")}
-        onKeyDown={(e) => onKeyDown(e, "packageName")}
-        onFocus={(e) => onFocus(e, "packageName")}
-        onMouseDown={(e) => onMouseDown(e, "packageName")}
       />
 
       {/* Company Selection: ONLY SHOW IF SCOPE IS COMPANY */}
@@ -311,9 +322,6 @@ function PackageForm({
         placeholder="e.g. Small carton box for electronics"
         value={formData.description}
         onChange={(e) => onChange(e, "description")}
-        onKeyDown={(e) => onKeyDown(e, "description")}
-        onFocus={(e) => onFocus(e, "description")}
-        onMouseDown={(e) => onMouseDown(e, "description")}
       />
 
       {/* Status Radio Buttons */}
@@ -349,7 +357,9 @@ function PackageForm({
    ============================================================ */
 
 export default function PackagesPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("management");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
 
   // ── Dashboard state ──
   const [stats, setStats] = useState<PackageStats>({
@@ -372,7 +382,7 @@ export default function PackagesPage() {
   });
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState(searchParams.get("companyId") || "");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState("");
@@ -381,10 +391,12 @@ export default function PackagesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editPackage, setEditPackage] = useState<Package | null>(null);
   const [deletePackage, setDeletePackage] = useState<Package | null>(null);
+  const [inactivePackageTarget, setInactivePackageTarget] = useState<Package | null>(null);
   const [formData, setFormData] = useState<PackageFormData>(emptyForm);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
 
   // ── Toast Notification ──
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -591,7 +603,15 @@ export default function PackagesPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to delete package.");
 
-      showToast("Package deleted successfully!");
+      const d = json.deleted;
+      const isGlobal = !deletePackage.companyId;
+      const msg = d
+        ? isGlobal
+          ? `Global package deleted! (Global Route Rates: ${d.globalRouteRates})`
+          : `Company package deleted! (Co. Route Rates: ${d.companyRouteRates})`
+        : "Package deleted successfully!";
+
+      showToast(msg);
       setDeletePackage(null);
       fetchPackages();
       fetchStats();
@@ -602,33 +622,81 @@ export default function PackagesPage() {
     }
   };
 
-  // Toggle status: PUT /api/packages/[packageId] with toggled status
-  const handleToggleStatus = async (pkg: Package) => {
-    setTogglingId(pkg.packageId);
+  // Cascade Inactive package: PUT /api/packages/[packageId] with status Inactive
+  const handleConfirmInactive = async () => {
+    if (!inactivePackageTarget) return;
+    setSubmitting(true);
     try {
-      const newStatus = pkg.status === "Active" ? "Inactive" : "Active";
-      const res = await fetch(`/api/packages/${pkg.packageId}`, {
+      const res = await fetch(`/api/packages/${inactivePackageTarget.packageId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packageName: pkg.packageName,
-          description: pkg.description || "",
-          status: newStatus,
-          ...(pkg.companyId ? { companyId: pkg.companyId } : {}),
+          packageName: inactivePackageTarget.packageName,
+          description: inactivePackageTarget.description || "",
+          status: "Inactive",
+          ...(inactivePackageTarget.companyId ? { companyId: inactivePackageTarget.companyId } : {}),
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to update package status.");
+      if (!res.ok) throw new Error(json.message || "Failed to inactivate package.");
 
-      showToast(`Package status changed to ${newStatus}.`);
+      const u = json.updated;
+      const isGlobal = !inactivePackageTarget.companyId;
+      const msg = u
+        ? isGlobal
+          ? `Global package & rates marked inactive! (Global Route Rates: ${u.globalRouteRates})`
+          : `Company package & rates marked inactive! (Co. Route Rates: ${u.companyRouteRates})`
+        : "Package and related records marked inactive.";
+
+      showToast(msg);
+      setInactivePackageTarget(null);
       fetchPackages();
       fetchStats();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      showToast(err instanceof Error ? err.message : "Failed to inactivate package.", "error");
     } finally {
-      setTogglingId(null);
+      setSubmitting(false);
     }
   };
+
+  // Toggle status: show Inactive modal if active, else directly activate
+  const handleToggleStatus = async (pkg: Package) => {
+    if (pkg.status === "Active") {
+      setInactivePackageTarget(pkg);
+    } else {
+      setTogglingId(pkg.packageId);
+      try {
+        const res = await fetch(`/api/packages/${pkg.packageId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            packageName: pkg.packageName,
+            description: pkg.description || "",
+            status: "Active",
+            ...(pkg.companyId ? { companyId: pkg.companyId } : {}),
+          }),
+        });
+        const json = await res.json();
+        const u = json.updated;
+        const isGlobal = !pkg.companyId;
+        const msg = u
+          ? isGlobal
+            ? `Global package & rates marked active! (Global Route Rates: ${u.globalRouteRates})`
+            : `Company package & rates marked active! (Co. Route Rates: ${u.companyRouteRates})`
+          : "Package status changed to Active.";
+
+        showToast(msg);
+
+        fetchPackages();
+        fetchStats();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      } finally {
+        setTogglingId(null);
+      }
+    }
+  };
+
 
   /* ============================================================
      Effects & Event Handlers
@@ -638,6 +706,14 @@ export default function PackagesPage() {
     fetchCompanies();
     fetchStats();
   }, [fetchCompanies, fetchStats]);
+
+  useEffect(() => {
+    const cId = searchParams.get("companyId");
+    if (cId) {
+      setCompanyFilter(cId);
+      setActiveTab("management");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchPackages();
@@ -657,11 +733,7 @@ export default function PackagesPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, [statusFilter, companyFilter]);
 
-  // Synchronous focus lock for space key on inputs
-  const lockedFieldsRef = useRef<Record<string, boolean>>({});
-
   const openEditModal = (pkg: Package) => {
-    lockedFieldsRef.current = {};
     const isCompanyPkg = !!pkg.companyId;
     setFormData({
       packageName: pkg.packageName || "",
@@ -675,7 +747,6 @@ export default function PackagesPage() {
   };
 
   const openCreateModal = () => {
-    lockedFieldsRef.current = {};
     setFormData(emptyForm);
     setFormErrors([]);
     setCreateOpen(true);
@@ -687,35 +758,6 @@ export default function PackagesPage() {
   ) => {
     let val = e.target.value;
     setFormData((prev) => ({ ...prev, [field]: val }));
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    field: keyof PackageFormData
-  ) => {
-    if (e.key === " " || e.code === "Space") {
-      e.preventDefault();
-      lockedFieldsRef.current[field] = true;
-      let val = (formData[field] || "") + " ";
-      setFormData((prev) => ({ ...prev, [field]: val }));
-      e.currentTarget.blur();
-    }
-  };
-
-  const handleFocus = (
-    e: React.FocusEvent<HTMLInputElement>,
-    field: keyof PackageFormData
-  ) => {
-    if (lockedFieldsRef.current[field]) {
-      e.currentTarget.blur();
-    }
-  };
-
-  const handleMouseDown = (
-    e: React.MouseEvent<HTMLInputElement>,
-    field: keyof PackageFormData
-  ) => {
-    lockedFieldsRef.current[field] = false;
   };
 
   /* ============================================================
@@ -805,21 +847,6 @@ export default function PackagesPage() {
         <div className="flex border-b border-slate-800 mb-8 gap-8">
           <button
             type="button"
-            onClick={() => setActiveTab("management")}
-            className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
-              activeTab === "management"
-                ? "text-violet-400"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Package Management
-            {activeTab === "management" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
-            )}
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab("dashboard")}
             className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
               activeTab === "dashboard"
@@ -829,6 +856,21 @@ export default function PackagesPage() {
           >
             Package Dashboard
             {activeTab === "dashboard" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("management")}
+            className={`pb-4 text-xs font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+              activeTab === "management"
+                ? "text-violet-400"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Package Management
+            {activeTab === "management" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500 rounded-full" />
             )}
           </button>
@@ -949,6 +991,23 @@ export default function PackagesPage() {
                   <option value="Active">Active Status</option>
                   <option value="Inactive">Inactive Status</option>
                 </select>
+
+                {/* Clear All Filters Button */}
+                {(searchInput || companyFilter || statusFilter !== "All") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput("");
+                      setSearch("");
+                      setCompanyFilter("");
+                      setStatusFilter("All");
+                      setPagination((prev) => ({ ...prev, page: 1 }));
+                    }}
+                    className="shrink-0 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1010,7 +1069,14 @@ export default function PackagesPage() {
                   {packages.map((pkg) => (
                     <div
                       key={pkg.packageId}
-                      className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-slate-700 transition-all group relative overflow-hidden"
+                      onClick={() => {
+                        if (pkg.companyId) {
+                          router.push(`/global-route-rates?tab=company&packageId=${pkg.packageId}&companyId=${pkg.companyId}`);
+                        } else {
+                          router.push(`/global-route-rates?tab=global&packageId=${pkg.packageId}`);
+                        }
+                      }}
+                      className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-slate-700 hover:bg-slate-800/40 transition-all group relative overflow-hidden cursor-pointer"
                     >
                       {/* Top Header */}
                       <div>
@@ -1052,16 +1118,23 @@ export default function PackagesPage() {
                           {/* Company Name Tag */}
                           {pkg.companyId && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800">
-                              {pkg.companyName || "Company Package"}
+                              {(() => {
+                                const comp = companies.find(c => c.companyId === pkg.companyId);
+                                return comp ? `${comp.companyName} - ${comp.branchCode || comp.branchName}` : (pkg.companyName || "Company Package");
+                              })()}
                             </span>
                           )}
                         </div>
 
                         {/* Description */}
                         <div className="text-xs text-slate-300 border-t border-slate-800/80 pt-3">
-                          <p className="text-slate-400 text-xs line-clamp-2">
+                          <p className="text-slate-400 text-xs line-clamp-2 mb-3">
                             {pkg.description || "No description provided."}
                           </p>
+                          <div className="flex justify-between items-center bg-slate-950/50 rounded-lg p-2.5 border border-slate-800/50">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Configured Route Rates</span>
+                            <span className="font-black text-slate-200">{pkg.stats?.routeRates ?? 0}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -1071,25 +1144,23 @@ export default function PackagesPage() {
                         <button
                           type="button"
                           disabled={togglingId === pkg.packageId}
-                          onClick={() => handleToggleStatus(pkg)}
-                          className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                            pkg.status === "Active"
-                              ? "bg-slate-950 border-amber-500/30 text-amber-400 hover:bg-amber-950/30"
-                              : "bg-slate-950 border-emerald-500/30 text-emerald-400 hover:bg-emerald-950/30"
-                          }`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(pkg); }}
+                          className="relative inline-flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={`Switch to ${pkg.status === "Active" ? "Inactive" : "Active"}`}
                         >
-                          {togglingId === pkg.packageId
-                            ? "Updating..."
-                            : pkg.status === "Active"
-                            ? "Set Inactive"
-                            : "Set Active"}
+                          <div className={`w-9 h-5 rounded-full transition-colors duration-300 ${pkg.status === "Active" ? "bg-emerald-600" : "bg-slate-700"}`}>
+                            <div className={`w-3.5 h-3.5 mt-[3px] rounded-full bg-white shadow transition-transform duration-300 ${pkg.status === "Active" ? "translate-x-[19px]" : "translate-x-[3px]"}`} />
+                          </div>
+                          <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            {togglingId === pkg.packageId ? "..." : pkg.status === "Active" ? "ON" : "OFF"}
+                          </span>
                         </button>
 
                         <div className="flex items-center gap-1.5">
                           {/* Edit Button */}
                           <button
                             type="button"
-                            onClick={() => openEditModal(pkg)}
+                            onClick={(e) => { e.stopPropagation(); openEditModal(pkg); }}
                             className="p-2 rounded-xl text-slate-400 hover:text-violet-300 hover:bg-violet-950/40 border border-transparent hover:border-violet-500/30 transition-all cursor-pointer"
                             title="Edit Package"
                           >
@@ -1101,7 +1172,7 @@ export default function PackagesPage() {
                           {/* Delete Button */}
                           <button
                             type="button"
-                            onClick={() => setDeletePackage(pkg)}
+                            onClick={(e) => { e.stopPropagation(); setDeletePackage(pkg); }}
                             className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 transition-all cursor-pointer"
                             title="Delete Package"
                           >
@@ -1170,9 +1241,6 @@ export default function PackagesPage() {
                 companyId: scope === "GLOBAL" ? "" : prev.companyId,
               }))
             }
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -1202,9 +1270,6 @@ export default function PackagesPage() {
             onChange={handleTextChange}
             onSelectCompany={(cId) => setFormData((prev) => ({ ...prev, companyId: cId }))}
             onScopeChange={() => {}}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -1213,29 +1278,67 @@ export default function PackagesPage() {
         <Modal
           isOpen={!!deletePackage}
           onClose={() => setDeletePackage(null)}
-          title="Delete Package"
-          size="sm"
+          title={`Delete ${deletePackage?.packageName || "Package"}?`}
+          size="md"
           footer={
             <>
               <Button variant="secondary" size="sm" onClick={() => setDeletePackage(null)}>
                 Cancel
               </Button>
               <Button variant="danger" size="sm" loading={submitting} onClick={handleDelete}>
-                Delete Package
+                Delete
               </Button>
             </>
           }
         >
-          <div className="flex flex-col gap-3 py-2 text-slate-300 text-xs">
-            <p>
-              Are you sure you want to delete{" "}
-              <strong className="text-slate-100 font-bold">
-                {deletePackage?.packageName}
-              </strong>
-              ?
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Deleting this {deletePackage?.companyId ? "company package" : "global package"} will also permanently delete:
             </p>
-            <p className="text-[11px] text-rose-450 font-medium">
-              This action cannot be undone. Any shipments referencing this package type will retain historical records.
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              {deletePackage?.companyId ? (
+                <li>All company route rates configured for this package</li>
+              ) : (
+                <li>All global route rates configured for this package</li>
+              )}
+            </ul>
+            <p className="text-rose-400 font-bold mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+        </Modal>
+
+        {/* Inactive Confirmation Modal */}
+        <Modal
+          isOpen={!!inactivePackageTarget}
+          onClose={() => setInactivePackageTarget(null)}
+          title={`Make ${inactivePackageTarget?.packageName || "Package"} Inactive?`}
+          size="md"
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setInactivePackageTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" loading={submitting} onClick={handleConfirmInactive}>
+                Make Inactive
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Making this {inactivePackageTarget?.companyId ? "company package" : "global package"} inactive will also make the following inactive:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>{inactivePackageTarget?.packageName}</li>
+              {inactivePackageTarget?.companyId ? (
+                <li>All company route rates configured for this package</li>
+              ) : (
+                <li>All global route rates configured for this package</li>
+              )}
+            </ul>
+            <p className="text-emerald-400 font-bold mt-2">
+              No data will be deleted.
             </p>
           </div>
         </Modal>
@@ -1243,3 +1346,4 @@ export default function PackagesPage() {
     </AdminLayout>
   );
 }
+

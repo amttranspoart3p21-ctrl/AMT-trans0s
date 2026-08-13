@@ -11,6 +11,10 @@ export function validateGlobalRouteRate(
     throw new Error("To Branch ID is required.");
   }
 
+  if (rateData.fromBranchId.trim() === rateData.toBranchId.trim()) {
+    throw new Error("From Branch and To Branch cannot be the same.");
+  }
+
   if (!rateData.packageId?.trim()) {
     throw new Error("Package ID is required.");
   }

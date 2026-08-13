@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AdminLayout from "@/components/layout/AdminLayout";
 import Pagination from "@/app/shipments/components/Pagination";
 import type { Package } from "@/types/packageType";
@@ -152,7 +152,8 @@ function SearchableCompanyDropdown({
 
 export default function RouteRatesPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>("global");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId>((searchParams.get("tab") as TabId) || "global");
 
   const [displayPackages, setDisplayPackages] = useState<Package[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -168,7 +169,23 @@ export default function RouteRatesPage() {
 
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState(searchParams.get("companyId") || "");
+
+  // Initialize search from packageId
+  useEffect(() => {
+    const pkgId = searchParams.get("packageId");
+    if (pkgId) {
+      fetch(`/api/packages/${pkgId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.packageName) {
+            setSearchInput(data.packageName);
+            setSearch(data.packageName);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [searchParams]);
   const [loading, setLoading] = useState(false);
 
   /* ============================================================
@@ -212,7 +229,14 @@ export default function RouteRatesPage() {
       if (cJson.companyRouteRates && Array.isArray(cJson.companyRouteRates)) {
         const map: Record<string, number> = {};
         cJson.companyRouteRates.forEach((r: CompanyRouteRate) => {
-          map[r.packageId] = (map[r.packageId] || 0) + 1;
+          if (r.packageId) {
+            const pkgId = r.packageId.trim();
+            if (r.companyId) {
+              const compKey = `${r.companyId.trim()}_${pkgId}`;
+              map[compKey] = (map[compKey] || 0) + 1;
+            }
+            map[pkgId] = (map[pkgId] || 0) + 1;
+          }
         });
         setCompanyRatesMap(map);
       }
@@ -425,7 +449,7 @@ export default function RouteRatesPage() {
               {displayPackages.map((pkg) => {
                 const count = activeTab === "global"
                   ? (globalRatesMap[pkg.packageId] || 0)
-                  : (companyRatesMap[pkg.packageId] || 0);
+                  : (pkg.companyId ? (companyRatesMap[`${pkg.companyId.trim()}_${pkg.packageId.trim()}`] || 0) : 0);
 
                 const targetPath = activeTab === "global"
                   ? `/global-route-rates/manage/${pkg.packageId}`
@@ -464,7 +488,10 @@ export default function RouteRatesPage() {
                       {pkg.companyId && (
                         <div className="mb-3">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-800">
-                            🏢 {pkg.companyName || "Company Package"}
+                            🏢 {(() => {
+                                const comp = companies.find(c => c.companyId === pkg.companyId);
+                                return comp ? `${comp.companyName} - ${comp.branchCode || comp.branchName}` : (pkg.companyName || "Company Package");
+                              })()}
                           </span>
                         </div>
                       )}

@@ -107,7 +107,11 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
       }
 
       // 4. Load configured company route rates
-      const rRes = await fetch(`/api/company-route-rates?packageId=${packageId}`);
+      let url = `/api/company-route-rates?packageId=${packageId}`;
+      if (pkgJson.companyId) {
+        url += `&companyId=${encodeURIComponent(pkgJson.companyId)}`;
+      }
+      const rRes = await fetch(url);
       const rJson = await rRes.json();
       if (rJson.companyRouteRates && Array.isArray(rJson.companyRouteRates)) {
         setRoutes(rJson.companyRouteRates);
@@ -326,7 +330,7 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
             href="/global-route-rates"
             className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-amber-400 transition-colors"
           >
-            ← Back to Route Rates
+            ← Back to Route Rates 
           </Link>
         </div>
 
@@ -545,29 +549,41 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                     {/* From Branch Dropdown */}
                     <select
                       value={fromBranchFilter}
-                      onChange={(e) => setFromBranchFilter(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFromBranchFilter(val);
+                        if (val && val === toBranchFilter) setToBranchFilter("");
+                      }}
                       className="w-full text-xs rounded-xl px-3 py-2 outline-none border border-slate-800 focus:border-amber-500 bg-slate-900 text-slate-200 cursor-pointer"
                     >
                       <option value="">All From Branches</option>
-                      {branches.map((b) => (
-                        <option key={b.branchId} value={b.branchId}>
-                          From: {b.branchName}
-                        </option>
-                      ))}
+                      {branches
+                        .filter((b) => b.branchId !== toBranchFilter)
+                        .map((b) => (
+                          <option key={b.branchId} value={b.branchId}>
+                            From: {b.branchName}
+                          </option>
+                        ))}
                     </select>
 
                     {/* To Branch Dropdown */}
                     <select
                       value={toBranchFilter}
-                      onChange={(e) => setToBranchFilter(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setToBranchFilter(val);
+                        if (val && val === fromBranchFilter) setFromBranchFilter("");
+                      }}
                       className="w-full text-xs rounded-xl px-3 py-2 outline-none border border-slate-800 focus:border-amber-500 bg-slate-900 text-slate-200 cursor-pointer"
                     >
                       <option value="">All To Branches</option>
-                      {branches.map((b) => (
-                        <option key={b.branchId} value={b.branchId}>
-                          To: {b.branchName}
-                        </option>
-                      ))}
+                      {branches
+                        .filter((b) => b.branchId !== fromBranchFilter)
+                        .map((b) => (
+                          <option key={b.branchId} value={b.branchId}>
+                            To: {b.branchName}
+                          </option>
+                        ))}
                     </select>
 
                     {/* Status Dropdown */}

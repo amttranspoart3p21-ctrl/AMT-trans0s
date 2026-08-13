@@ -1,3 +1,11 @@
+export interface BranchCardStats {
+  companies: number;
+  companyPackages: number;
+  companyRouteRates: number;
+  globalPackages: number;
+  globalRouteRates: number;
+}
+
 export interface Branch {
   branchId: string;
 
@@ -12,8 +20,10 @@ export interface Branch {
   phoneNumber4?: string;
   phoneNumber5?: string;
 
-  status: "Active" | "Shutdown";
+  status: "Active" | "Inactive" | "Shutdown";
 
   createdAt: string;
   updatedAt: string;
+
+  stats?: BranchCardStats;
 }

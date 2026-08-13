@@ -3,6 +3,8 @@ import {
     getBranchById,
     updateBranch,
     deleteBranch,
+    inactiveBranch,
+    activateBranch,
 } from "@/services/branch.service";
 
 type RouteContext = {
@@ -56,6 +58,26 @@ export async function PUT(
 
     const body = await request.json();
 
+    if (body.status === "Inactive" || body.status === "Shutdown") {
+      const { updatedBranch, updatedCounts } = await inactiveBranch(branchId, body.status);
+
+      return NextResponse.json({
+        success: true,
+        message: "Branch and related records marked inactive",
+        updated: updatedCounts,
+        data: updatedBranch,
+      });
+    } else if (body.status === "Active") {
+      const { updatedBranch, updatedCounts } = await activateBranch(branchId);
+
+      return NextResponse.json({
+        success: true,
+        message: "Branch and related records marked active",
+        updated: updatedCounts,
+        data: updatedBranch,
+      });
+    }
+
     const updatedBranch = await updateBranch(branchId, body);
 
     return NextResponse.json({
@@ -75,6 +97,7 @@ export async function PUT(
   }
 }
 
+
 export async function DELETE(
   request: NextRequest,
   { params }: RouteContext
@@ -82,11 +105,12 @@ export async function DELETE(
   try {
     const { branchId } = await params;
 
-    const deletedBranch = await deleteBranch(branchId);
+    const { deletedBranch, deletedCounts } = await deleteBranch(branchId);
 
     return NextResponse.json({
       success: true,
-      message: "Branch deleted successfully.",
+      message: "Branch deleted successfully",
+      deleted: deletedCounts,
       data: deletedBranch,
     });
   } catch (error) {
@@ -99,4 +123,4 @@ export async function DELETE(
       { status: 400 }
     );
   }
-}
+}

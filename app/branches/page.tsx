@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import AdminLayout from "@/components/layout/AdminLayout";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -40,7 +41,7 @@ interface BranchFormData {
   phoneNumber3: string;
   phoneNumber4: string;
   phoneNumber5: string;
-  status: "Active" | "Shutdown";
+  status: "Active" | "Inactive" | "Shutdown";
 }
 
 const emptyForm: BranchFormData = {
@@ -59,19 +60,14 @@ interface BranchFormProps {
   formData: BranchFormData;
   formErrors: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>, field: keyof BranchFormData) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, field: keyof BranchFormData) => void;
-  onFocus: (e: React.FocusEvent<HTMLInputElement>, field: keyof BranchFormData) => void;
-  onMouseDown: (e: React.MouseEvent<HTMLInputElement>, field: keyof BranchFormData) => void;
-  onStatusChange: (status: "Active" | "Shutdown") => void;
+  onStatusChange: (status: "Active" | "Inactive" | "Shutdown") => void;
 }
+
 
 function BranchForm({
   formData,
   formErrors,
   onChange,
-  onKeyDown,
-  onFocus,
-  onMouseDown,
   onStatusChange,
 }: BranchFormProps) {
   return (
@@ -89,18 +85,12 @@ function BranchForm({
           placeholder="e.g. Mumbai Central"
           value={formData.branchName}
           onChange={(e) => onChange(e, "branchName")}
-          onKeyDown={(e) => onKeyDown(e, "branchName")}
-          onFocus={(e) => onFocus(e, "branchName")}
-          onMouseDown={(e) => onMouseDown(e, "branchName")}
         />
         <Input
           label="Branch Code"
           placeholder="e.g. MUM"
           value={formData.branchCode}
           onChange={(e) => onChange(e, "branchCode")}
-          onKeyDown={(e) => onKeyDown(e, "branchCode")}
-          onFocus={(e) => onFocus(e, "branchCode")}
-          onMouseDown={(e) => onMouseDown(e, "branchCode")}
         />
       </div>
       <Input
@@ -108,9 +98,6 @@ function BranchForm({
         placeholder="Full branch address"
         value={formData.address}
         onChange={(e) => onChange(e, "address")}
-        onKeyDown={(e) => onKeyDown(e, "address")}
-        onFocus={(e) => onFocus(e, "address")}
-        onMouseDown={(e) => onMouseDown(e, "address")}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
@@ -118,18 +105,12 @@ function BranchForm({
           placeholder="+91 99XXX XXXXX"
           value={formData.phoneNumber1}
           onChange={(e) => onChange(e, "phoneNumber1")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber1")}
-          onFocus={(e) => onFocus(e, "phoneNumber1")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber1")}
         />
         <Input
           label="Phone Number 2"
           placeholder="Optional"
           value={formData.phoneNumber2}
           onChange={(e) => onChange(e, "phoneNumber2")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber2")}
-          onFocus={(e) => onFocus(e, "phoneNumber2")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber2")}
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -138,33 +119,24 @@ function BranchForm({
           placeholder="Optional"
           value={formData.phoneNumber3}
           onChange={(e) => onChange(e, "phoneNumber3")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber3")}
-          onFocus={(e) => onFocus(e, "phoneNumber3")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber3")}
         />
         <Input
           label="Phone Number 4"
           placeholder="Optional"
           value={formData.phoneNumber4}
           onChange={(e) => onChange(e, "phoneNumber4")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber4")}
-          onFocus={(e) => onFocus(e, "phoneNumber4")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber4")}
         />
         <Input
           label="Phone Number 5"
           placeholder="Optional"
           value={formData.phoneNumber5}
           onChange={(e) => onChange(e, "phoneNumber5")}
-          onKeyDown={(e) => onKeyDown(e, "phoneNumber5")}
-          onFocus={(e) => onFocus(e, "phoneNumber5")}
-          onMouseDown={(e) => onMouseDown(e, "phoneNumber5")}
         />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
         <div className="flex gap-3">
-          {(["Active", "Shutdown"] as const).map((s) => (
+          {(["Active", "Inactive", "Shutdown"] as const).map((s) => (
             <button
               key={s}
               type="button"
@@ -191,6 +163,7 @@ function BranchForm({
    ============================================================ */
 
 export default function BranchesPage() {
+  const router = useRouter();
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
 
@@ -217,10 +190,12 @@ export default function BranchesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editBranch, setEditBranch] = useState<Branch | null>(null);
   const [deleteBranch, setDeleteBranch] = useState<Branch | null>(null);
+  const [inactiveBranchTarget, setInactiveBranchTarget] = useState<Branch | null>(null);
   const [formData, setFormData] = useState<BranchFormData>(emptyForm);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
 
   // ── Toast/Feedback ──
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -375,7 +350,12 @@ export default function BranchesPage() {
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
 
-      showToast("Branch deleted successfully!");
+      const d = json.deleted;
+      const msg = d
+        ? `Branch deleted! (Companies: ${d.companies}, Packages: ${d.companyPackages}, Co. Rates: ${d.companyRouteRates}, Global Rates: ${d.globalRouteRates})`
+        : "Branch deleted successfully!";
+
+      showToast(msg);
       setDeleteBranch(null);
       fetchBranches();
       fetchStats();
@@ -386,38 +366,77 @@ export default function BranchesPage() {
     }
   };
 
-  // Toggle status: PUT /api/branches/[branchId] with toggled status
-  const handleToggleStatus = async (branch: Branch) => {
-    setTogglingId(branch.branchId);
+  // Cascade Inactive branch: PUT /api/branches/[branchId] with status Inactive
+  const handleConfirmInactive = async () => {
+    if (!inactiveBranchTarget) return;
+    setSubmitting(true);
     try {
-      const newStatus = branch.status === "Active" ? "Shutdown" : "Active";
-      const res = await fetch(`/api/branches/${branch.branchId}`, {
+      const res = await fetch(`/api/branches/${inactiveBranchTarget.branchId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branchName: branch.branchName.toUpperCase(),
-          branchCode: branch.branchCode.toUpperCase(),
-          address: branch.address,
-          phoneNumber1: branch.phoneNumber1,
-          ...(branch.phoneNumber2 ? { phoneNumber2: branch.phoneNumber2 } : {}),
-          ...(branch.phoneNumber3 ? { phoneNumber3: branch.phoneNumber3 } : {}),
-          ...(branch.phoneNumber4 ? { phoneNumber4: branch.phoneNumber4 } : {}),
-          ...(branch.phoneNumber5 ? { phoneNumber5: branch.phoneNumber5 } : {}),
-          status: newStatus,
+          branchName: inactiveBranchTarget.branchName.toUpperCase(),
+          branchCode: inactiveBranchTarget.branchCode.toUpperCase(),
+          address: inactiveBranchTarget.address,
+          phoneNumber1: inactiveBranchTarget.phoneNumber1,
+          status: "Inactive",
         }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
 
-      showToast(`Branch status changed to ${newStatus}.`);
+      const u = json.updated;
+      const msg = u
+        ? `Branch & dependents marked inactive! (Companies: ${u.companies}, Packages: ${u.companyPackages}, Co. Rates: ${u.companyRouteRates}, Global Rates: ${u.globalRouteRates})`
+        : "Branch and related records marked inactive.";
+
+      showToast(msg);
+      setInactiveBranchTarget(null);
       fetchBranches();
       fetchStats();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      showToast(err instanceof Error ? err.message : "Failed to inactivate branch.", "error");
     } finally {
-      setTogglingId(null);
+      setSubmitting(false);
     }
   };
+
+  // Toggle status trigger: show Inactive confirmation modal if active, else directly activate
+  const handleToggleStatus = async (branch: Branch) => {
+    if (branch.status === "Active") {
+      setInactiveBranchTarget(branch);
+    } else {
+      setTogglingId(branch.branchId);
+      try {
+        const res = await fetch(`/api/branches/${branch.branchId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchName: branch.branchName.toUpperCase(),
+            branchCode: branch.branchCode.toUpperCase(),
+            address: branch.address,
+            phoneNumber1: branch.phoneNumber1,
+            status: "Active",
+          }),
+        });
+        const json = await res.json();
+        const u = json.updated;
+        const msg = u
+          ? `Branch & dependents marked active! (Companies: ${u.companies}, Packages: ${u.companyPackages}, Co. Rates: ${u.companyRouteRates}, Global Rates: ${u.globalRouteRates})`
+          : "Branch status changed to Active.";
+
+        showToast(msg);
+
+        fetchBranches();
+        fetchStats();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "Failed to change status.", "error");
+      } finally {
+        setTogglingId(null);
+      }
+    }
+  };
+
 
   /* ============================================================
      Effects
@@ -447,11 +466,8 @@ export default function BranchesPage() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, [statusFilter]);
 
-  const lockedFieldsRef = useRef<Record<string, boolean>>({});
-
   // Open edit modal with pre-filled data
   const openEditModal = (branch: Branch) => {
-    lockedFieldsRef.current = {};
     setFormData({
       branchName: (branch.branchName || "").toUpperCase(),
       branchCode: (branch.branchCode || "").toUpperCase(),
@@ -468,7 +484,6 @@ export default function BranchesPage() {
   };
 
   const openCreateModal = () => {
-    lockedFieldsRef.current = {};
     setFormData(emptyForm);
     setFormErrors([]);
     setCreateOpen(true);
@@ -482,46 +497,7 @@ export default function BranchesPage() {
     if (field === "branchName" || field === "branchCode") {
       val = val.toUpperCase();
     }
-    console.log(`[BRANCH DEBUG] change event on ${field}, val: "${val}"`);
     setFormData((prev) => ({ ...prev, [field]: val }));
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    field: keyof BranchFormData
-  ) => {
-    console.log(`[BRANCH DEBUG] keydown "${e.key}" on field: ${field}, activeElement:`, document.activeElement?.tagName, "locked:", lockedFieldsRef.current[field]);
-    if (e.key === " " || e.code === "Space") {
-      e.preventDefault();
-      lockedFieldsRef.current[field] = true;
-      let val = (formData[field] || "") + " ";
-      if (field === "branchName" || field === "branchCode") {
-        val = val.toUpperCase();
-      }
-      console.log(`[BRANCH DEBUG] SPACE pressed. New value: "${val}". Locking and blurring field: ${field}`);
-      setFormData((prev) => ({ ...prev, [field]: val }));
-      e.currentTarget.blur();
-      console.log(`[BRANCH DEBUG] Immediately after blur call, activeElement is:`, document.activeElement?.tagName);
-    }
-  };
-
-  const handleFocus = (
-    e: React.FocusEvent<HTMLInputElement>,
-    field: keyof BranchFormData
-  ) => {
-    console.log(`[BRANCH DEBUG] focus event on ${field}. Is locked?`, lockedFieldsRef.current[field]);
-    if (lockedFieldsRef.current[field]) {
-      console.log(`[BRANCH DEBUG] Field ${field} IS LOCKED -> Rejecting focus and blurring!`);
-      e.currentTarget.blur();
-    }
-  };
-
-  const handleMouseDown = (
-    e: React.MouseEvent<HTMLInputElement>,
-    field: keyof BranchFormData
-  ) => {
-    console.log(`[BRANCH DEBUG] mousedown on ${field} -> Unlocking field!`);
-    lockedFieldsRef.current[field] = false;
   };
 
   /* ============================================================
@@ -784,7 +760,8 @@ export default function BranchesPage() {
                   {branches.map((branch) => (
                     <div
                       key={branch.branchId}
-                      className="relative rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 flex flex-col gap-4 hover:border-slate-700 transition-all duration-300 group"
+                      onClick={() => router.push(`/companies?branchId=${branch.branchId}`)}
+                      className="relative rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-5 flex flex-col gap-4 hover:border-slate-700 hover:bg-slate-800/40 transition-all duration-300 group cursor-pointer"
                     >
                       {/* Card Header */}
                       <div className="flex items-start justify-between gap-3">
@@ -822,13 +799,37 @@ export default function BranchesPage() {
                           </svg>
                           <span>{branch.phoneNumber1}</span>
                         </div>
+
+                        {/* Stats Section */}
+                        <div className="mt-2 pt-3 border-t border-slate-800/60 grid grid-cols-1 gap-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Companies</span>
+                            <span className="font-bold text-slate-200">{branch.stats?.companies ?? 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Company Packages</span>
+                            <span className="font-bold text-slate-200">{branch.stats?.companyPackages ?? 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Company Route Rates</span>
+                            <span className="font-bold text-slate-200">{branch.stats?.companyRouteRates ?? 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Global Packages</span>
+                            <span className="font-bold text-slate-200">{branch.stats?.globalPackages ?? 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400">Global Route Rates</span>
+                            <span className="font-bold text-slate-200">{branch.stats?.globalRouteRates ?? 0}</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Card Footer Actions */}
                       <div className="flex items-center justify-between pt-3 border-t border-slate-800/60">
                         {/* Status toggle */}
                         <button
-                          onClick={() => handleToggleStatus(branch)}
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(branch); }}
                           disabled={togglingId === branch.branchId}
                           className="relative inline-flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           title={`Switch to ${branch.status === "Active" ? "Shutdown" : "Active"}`}
@@ -844,7 +845,7 @@ export default function BranchesPage() {
                         {/* Edit / Delete */}
                         <div className="flex gap-2">
                           <button
-                            onClick={() => openEditModal(branch)}
+                            onClick={(e) => { e.stopPropagation(); openEditModal(branch); }}
                             className="p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer"
                             title="Edit"
                           >
@@ -853,7 +854,7 @@ export default function BranchesPage() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => setDeleteBranch(branch)}
+                            onClick={(e) => { e.stopPropagation(); setDeleteBranch(branch); }}
                             className="p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 transition-all cursor-pointer"
                             title="Delete"
                           >
@@ -912,9 +913,6 @@ export default function BranchesPage() {
             formData={formData}
             formErrors={formErrors}
             onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -940,9 +938,6 @@ export default function BranchesPage() {
             formData={formData}
             formErrors={formErrors}
             onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            onMouseDown={handleMouseDown}
             onStatusChange={(status) => setFormData((prev) => ({ ...prev, status }))}
           />
         </Modal>
@@ -951,32 +946,68 @@ export default function BranchesPage() {
         <Modal
           isOpen={!!deleteBranch}
           onClose={() => setDeleteBranch(null)}
-          title="Delete Branch"
-          size="sm"
+          title={`Delete ${deleteBranch?.branchName || "Branch"}?`}
+          size="md"
           footer={
             <>
               <Button variant="secondary" size="sm" onClick={() => setDeleteBranch(null)}>
                 Cancel
               </Button>
               <Button variant="danger" size="sm" loading={submitting} onClick={handleDelete}>
-                Delete Branch
+                Delete
               </Button>
             </>
           }
         >
-          <div className="flex flex-col items-center gap-4 py-4">
-            <div className="w-14 h-14 rounded-2xl bg-rose-500/15 flex items-center justify-center">
-              <svg className="h-7 w-7 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-            </div>
-            <p className="text-sm text-slate-300 text-center">
-              Are you sure you want to delete <strong className="text-slate-100">{deleteBranch?.branchName}</strong>?
-              <br />
-              <span className="text-slate-500 text-xs">This action cannot be undone.</span>
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Deleting this branch will also permanently delete:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>All companies registered under this branch</li>
+              <li>All company/special packages belonging to those companies</li>
+              <li>All company route rates belonging to those companies/packages</li>
+              <li>All global route rates where this branch is used as the From Branch or To Branch</li>
+            </ul>
+            <p className="text-rose-400 font-bold mt-2">
+              This action cannot be undone.
             </p>
           </div>
         </Modal>
+
+        {/* Inactive Confirmation Modal */}
+        <Modal
+          isOpen={!!inactiveBranchTarget}
+          onClose={() => setInactiveBranchTarget(null)}
+          title={`Make ${inactiveBranchTarget?.branchName || "Branch"} Inactive?`}
+          size="md"
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setInactiveBranchTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" loading={submitting} onClick={handleConfirmInactive}>
+                Make Inactive
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 py-2 text-xs text-slate-300">
+            <p className="font-semibold text-slate-200">
+              Making this branch inactive will also make the following inactive:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>All companies registered under this branch</li>
+              <li>All company/special packages belonging to those companies</li>
+              <li>All company route rates belonging to those companies/packages</li>
+              <li>All global route rates where this branch is used as the From Branch or To Branch</li>
+            </ul>
+            <p className="text-emerald-400 font-bold mt-2">
+              No data will be deleted.
+            </p>
+          </div>
+        </Modal>
+
 
         {/* Toast Notification */}
         {toast && (

@@ -9,4 +9,5 @@ export const PACKAGE_COLUMNS: Partial<Column>[] = [
   { header: "Status", key: "status", width: 15 },
   { header: "Created At", key: "createdAt", width: 25 },
   { header: "Updated At", key: "updatedAt", width: 25 },
-];
+  { header: "Inactive Reason", key: "inactiveReason", width: 25 },
+];

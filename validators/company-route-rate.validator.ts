@@ -15,7 +15,7 @@ export function validateCompanyRouteRate(
     throw new Error("To Branch ID is required.");
   }
 
-  if (rateData.fromBranchId === rateData.toBranchId) {
+  if (rateData.fromBranchId?.trim() === rateData.toBranchId?.trim()) {
     throw new Error("From Branch and To Branch cannot be the same.");
   }
 

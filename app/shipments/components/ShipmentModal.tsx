@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { PAYMENT_STATUS_OPTIONS, DELIVERY_STATUS_OPTIONS } from "@/types/shipment";
 import type { ShipmentRecord } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import type { Company } from "@/types/company";
@@ -752,12 +753,10 @@ export default function ShipmentModal({
           <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5">Payment Status</label>
           {isEdit ? (
             <SearchableSelect
-              value={formData.paymentStatus || "Unpaid"}
+              value={formData.paymentStatus || "Pending"}
               onChange={(val) => handleFieldChange("paymentStatus", val)}
-              options={[
-                { value: "Unpaid", label: "Unpaid" },
-                { value: "Paid", label: "Paid" },
-              ]}
+              options={PAYMENT_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+              hideClearOption
             />
           ) : (
             <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold">{formData.paymentStatus}</div>
@@ -769,12 +768,10 @@ export default function ShipmentModal({
           <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider block mb-1.5">Delivery Status</label>
           {isEdit ? (
             <SearchableSelect
-              value={formData.deliveryStatus || "Pending"}
+              value={formData.deliveryStatus || "Not Delivered"}
               onChange={(val) => handleFieldChange("deliveryStatus", val)}
-              options={[
-                { value: "Pending", label: "Pending" },
-                { value: "Delivered", label: "Delivered" },
-              ]}
+              options={DELIVERY_STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+              hideClearOption
             />
           ) : (
             <div className="bg-slate-950/40 border border-slate-850 px-3 py-2 rounded-xl text-slate-300 font-semibold">{formData.deliveryStatus}</div>

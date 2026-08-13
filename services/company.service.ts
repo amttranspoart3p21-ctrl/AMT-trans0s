@@ -6,10 +6,19 @@ import {
 } from "@/lib/company";
 
 import { readBranches } from "@/lib/branch";
+import { readPackages, writePackages } from "@/lib/package";
+import { readCompanyRouteRates, writeCompanyRouteRates } from "@/lib/company-route-rate";
 
 import { validateCompany } from "@/validators/company.validator";
 
 import { generateCompanyId } from "@/utils/generateCompanyId";
+
+export interface CompanyCascadeCounts {
+  company?: number;
+  packages?: number;
+  companyRouteRates?: number;
+}
+
 
 
 export async function createCompany(
@@ -122,8 +131,27 @@ export async function getCompanies(
   const start = (page - 1) * limit;
   const end = start + limit;
 
+  const pagedCompanies = companies.slice(start, end);
+
+  // Fetch related data for stats
+  const packages = await readPackages();
+  const companyRouteRates = await readCompanyRouteRates();
+
+  const companiesWithStats = pagedCompanies.map((company) => {
+    const companyPackagesCount = packages.filter(p => p.companyId === company.companyId).length;
+    const companyRouteRatesCount = companyRouteRates.filter(r => r.companyId === company.companyId).length;
+
+    return {
+      ...company,
+      stats: {
+        companyPackages: companyPackagesCount,
+        companyRouteRates: companyRouteRatesCount,
+      }
+    };
+  });
+
   return {
-    companies: companies.slice(start, end),
+    companies: companiesWithStats,
     totalCompanies,
     currentPage: page,
     totalPages: Math.ceil(totalCompanies / limit),
@@ -207,23 +235,183 @@ export async function updateCompany(
 
 export async function deleteCompany(
     companyId: string
-): Promise<void> {
+): Promise<{ deletedCompany: Company; deletedCounts: CompanyCascadeCounts }> {
     const companies = await readCompanies();
 
-    const companyExists = companies.some(
-        (company) => company.companyId === companyId
+    const company = companies.find(
+        (c) => c.companyId === companyId
     );
 
-    if (!companyExists) {
+    if (!company) {
         throw new Error("Company not found.");
     }
 
-    const updatedCompanies = companies.filter(
-        (company) => company.companyId !== companyId
+    // 1. Delete Company Packages belonging to this Company
+    const packages = await readPackages();
+    const companyPackagesToDelete = packages.filter((p) => p.companyId === companyId);
+    const remainingPackages = packages.filter((p) => p.companyId !== companyId);
+
+    // 2. Delete Company Route Rates belonging to this Company
+    const companyRouteRates = await readCompanyRouteRates();
+    const companyRouteRatesToDelete = companyRouteRates.filter((r) => r.companyId === companyId);
+    const remainingCompanyRouteRates = companyRouteRates.filter((r) => r.companyId !== companyId);
+
+    // 3. Delete Company
+    const remainingCompanies = companies.filter(
+        (c) => c.companyId !== companyId
     );
 
-    await writeCompanies(updatedCompanies);
+    await writeCompanyRouteRates(remainingCompanyRouteRates);
+    await writePackages(remainingPackages);
+    await writeCompanies(remainingCompanies);
+
+    return {
+        deletedCompany: company,
+        deletedCounts: {
+            company: 1,
+            packages: companyPackagesToDelete.length,
+            companyRouteRates: companyRouteRatesToDelete.length,
+        },
+    };
 }
+
+export async function inactiveCompany(
+    companyId: string
+): Promise<{ updatedCompany: Company; updatedCounts: CompanyCascadeCounts }> {
+    const companies = await readCompanies();
+
+    const companyIndex = companies.findIndex(
+        (c) => c.companyId === companyId
+    );
+
+    if (companyIndex === -1) {
+        throw new Error("Company not found.");
+    }
+
+    const now = new Date().toISOString();
+    const companyTag = `company:${companyId}`;
+
+    companies[companyIndex] = {
+        ...companies[companyIndex],
+        status: "Inactive",
+        inactiveReason: "manual",
+        updatedAt: now,
+    };
+    const updatedCompany = companies[companyIndex];
+
+    // 1. Set Company Packages belonging to this company -> Inactive ONLY IF Active
+    const packages = await readPackages();
+    let updatedPackagesCount = 0;
+
+    packages.forEach((p) => {
+        if (p.companyId === companyId) {
+            if (p.status === "Active") {
+                p.status = "Inactive";
+                p.inactiveReason = companyTag;
+                p.updatedAt = now;
+                updatedPackagesCount++;
+            }
+        }
+    });
+
+    // 2. Set Company Route Rates belonging to this company -> Inactive ONLY IF Active
+    const companyRouteRates = await readCompanyRouteRates();
+    let updatedRouteRatesCount = 0;
+
+    companyRouteRates.forEach((r) => {
+        if (r.companyId === companyId) {
+            if (r.status === "Active") {
+                r.status = "Inactive";
+                r.inactiveReason = companyTag;
+                r.updatedAt = now;
+                updatedRouteRatesCount++;
+            }
+        }
+    });
+
+    await writeCompanyRouteRates(companyRouteRates);
+    await writePackages(packages);
+    await writeCompanies(companies);
+
+    return {
+        updatedCompany,
+        updatedCounts: {
+            company: 1,
+            packages: updatedPackagesCount,
+            companyRouteRates: updatedRouteRatesCount,
+        },
+    };
+}
+
+export async function activateCompany(
+    companyId: string
+): Promise<{ updatedCompany: Company; updatedCounts: CompanyCascadeCounts }> {
+    const companies = await readCompanies();
+
+    const companyIndex = companies.findIndex(
+        (c) => c.companyId === companyId
+    );
+
+    if (companyIndex === -1) {
+        throw new Error("Company not found.");
+    }
+
+    const now = new Date().toISOString();
+    const companyTag = `company:${companyId}`;
+
+    const updatedComp = { ...companies[companyIndex] };
+    updatedComp.status = "Active";
+    delete updatedComp.inactiveReason;
+    updatedComp.updatedAt = now;
+    companies[companyIndex] = updatedComp;
+
+    const updatedCompany = companies[companyIndex];
+
+    // 1. Set Company Packages belonging to this company -> Active ONLY IF inactivated by this company cascade
+    const packages = await readPackages();
+    let updatedPackagesCount = 0;
+
+    packages.forEach((p) => {
+        if (p.companyId === companyId) {
+            if (p.inactiveReason === companyTag) {
+                p.status = "Active";
+                delete p.inactiveReason;
+                p.updatedAt = now;
+                updatedPackagesCount++;
+            }
+        }
+    });
+
+    // 2. Set Company Route Rates belonging to this company -> Active ONLY IF inactivated by this company cascade
+    const companyRouteRates = await readCompanyRouteRates();
+    let updatedRouteRatesCount = 0;
+
+    companyRouteRates.forEach((r) => {
+        if (r.companyId === companyId) {
+            if (r.inactiveReason === companyTag) {
+                r.status = "Active";
+                delete r.inactiveReason;
+                r.updatedAt = now;
+                updatedRouteRatesCount++;
+            }
+        }
+    });
+
+    await writeCompanyRouteRates(companyRouteRates);
+    await writePackages(packages);
+    await writeCompanies(companies);
+
+    return {
+        updatedCompany,
+        updatedCounts: {
+            company: 1,
+            packages: updatedPackagesCount,
+            companyRouteRates: updatedRouteRatesCount,
+        },
+    };
+}
+
+
 
 export async function companyNameExists(
     branchId: string,

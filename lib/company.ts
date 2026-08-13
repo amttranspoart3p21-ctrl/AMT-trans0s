@@ -101,6 +101,9 @@ export async function readCompanies(): Promise<Company[]> {
     const branchCode = branchMap.get(branchId) || "";
     const displayName = branchCode ? `${companyName} - ${branchCode}` : companyName;
 
+    const status = (row.getCell(11).value?.toString() as Company["status"]) ?? "Active";
+    const inactiveReason = row.getCell(14).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+
     companies.push({
       companyId,
       branchId,
@@ -114,11 +117,13 @@ export async function readCompanies(): Promise<Company[]> {
       phoneNumber3: row.getCell(8).value?.toString() ?? undefined,
       email: row.getCell(9).value?.toString() ?? undefined,
       gstNumber: row.getCell(10).value?.toString() ?? undefined,
-      status: (row.getCell(11).value?.toString() as Company["status"]) ?? "Active",
+      status,
+      inactiveReason,
       createdAt: row.getCell(12).value?.toString() ?? "",
       updatedAt: row.getCell(13).value?.toString() ?? "",
     });
   });
+
 
   return companies;
 }
@@ -156,8 +161,10 @@ export async function writeCompanies(companies: Company[]): Promise<void> {
       status: company.status,
       createdAt: company.createdAt,
       updatedAt: company.updatedAt,
+      inactiveReason: company.inactiveReason,
     });
   });
+
 
  await workbook.xlsx.writeFile(COMPANY_FILE);
 }
