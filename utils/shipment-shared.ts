@@ -114,3 +114,88 @@ export function calculateQuantity(quantityVal: string | number | undefined | nul
   const parsed = parseFloat(str);
   return isNaN(parsed) ? 0 : parsed;
 }
+
+export interface PaymentContext {
+  paymentCompany: string | null;
+  paymentBranch: string | null;
+}
+
+/**
+ * Centralized helper for determining the actual payment context for Company Billing.
+ * Evaluates paymentReceivingBranch to identify whether the FROM side or TO side is responsible
+ * for payment, resolving the exact paymentCompany and paymentBranch.
+ */
+export function resolvePaymentContext(
+  shipment: {
+    paymentCompany?: string;
+    paymentReceivingBranch?: string;
+    fromCompany?: string;
+    fromAmtBranch?: string;
+    toCompany?: string;
+    toAmtBranch?: string;
+  },
+  branches: { branchCode: string; branchName: string; branchId: string }[] = []
+): PaymentContext {
+  const prb = (shipment.paymentReceivingBranch || "").trim();
+
+  // Helper to normalize branch values to clean branchCode (e.g. "AMB", "RNP", "CHE")
+  const resolveBranchCode = (val: string | undefined): string => {
+    if (!val) return "";
+    const clean = val.trim();
+    if (!clean) return "";
+    const match = branches.find(
+      (b) =>
+        b.branchCode.toLowerCase() === clean.toLowerCase() ||
+        b.branchName.toLowerCase() === clean.toLowerCase() ||
+        b.branchId.toLowerCase() === clean.toLowerCase()
+    );
+    return match ? match.branchCode : clean;
+  };
+
+  // Rule 7 & Test 4: Missing/empty paymentReceivingBranch -> NO payment context resolved
+  if (!prb) {
+    return { paymentCompany: null, paymentBranch: null };
+  }
+
+  const prbLower = prb.toLowerCase();
+
+  // Case 1: Payment Branch = "From Company" or "From Branch"
+  if (prbLower === "from company" || prbLower === "from branch") {
+    const pComp = (shipment.fromCompany || shipment.paymentCompany || "").trim();
+    const pBranch = resolveBranchCode(shipment.fromAmtBranch);
+    return {
+      paymentCompany: pComp || null,
+      paymentBranch: pBranch || null,
+    };
+  }
+
+  // Case 2: Payment Branch = "To Company" or "To Branch"
+  if (prbLower === "to company" || prbLower === "to branch") {
+    const pComp = (shipment.toCompany || shipment.paymentCompany || "").trim();
+    const pBranch = resolveBranchCode(shipment.toAmtBranch);
+    return {
+      paymentCompany: pComp || null,
+      paymentBranch: pBranch || null,
+    };
+  }
+
+  // Case 3: paymentReceivingBranch contains a specific branch code/name (e.g. "CHE", "AMB", "RNP")
+  const prbBranchCode = resolveBranchCode(prb);
+  const fromBranchCode = resolveBranchCode(shipment.fromAmtBranch);
+  const toBranchCode = resolveBranchCode(shipment.toAmtBranch);
+
+  let pComp = "";
+  if (toBranchCode && prbBranchCode && toBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
+    pComp = (shipment.toCompany || "").trim();
+  } else if (fromBranchCode && prbBranchCode && fromBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
+    pComp = (shipment.fromCompany || "").trim();
+  } else {
+    pComp = (shipment.paymentCompany || shipment.fromCompany || shipment.toCompany || "").trim();
+  }
+
+  return {
+    paymentCompany: pComp || null,
+    paymentBranch: prbBranchCode || null,
+  };
+}
+

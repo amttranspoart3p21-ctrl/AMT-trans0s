@@ -12,6 +12,7 @@ import type { Package } from "@/types/packageType";
 import DocumentFilters from "./components/DocumentFilters";
 import DocumentToolbar from "./components/DocumentToolbar";
 import DocumentPreview from "./components/DocumentPreview";
+import CompanyBillingWizard from "./components/CompanyBillingWizard";
 import { documentConfigurations } from "./components/document-config";
 
 export default function DocumentsPage() {
@@ -329,32 +330,47 @@ export default function DocumentsPage() {
 
           {/* Global Documents Action Toolbar */}
           <div className="lg:col-span-3">
-            <DocumentToolbar
-              onFiltersToggle={() => setShowFilters(!showFilters)}
-              showFilters={showFilters}
-              activeFiltersCount={activeFiltersCount}
-              onPrint={handlePrint}
-              onExportExcel={handleExportExcel}
-            />
+            {docType !== "billing" && (
+              <DocumentToolbar
+                onFiltersToggle={() => setShowFilters(!showFilters)}
+                showFilters={showFilters}
+                activeFiltersCount={activeFiltersCount}
+                onPrint={handlePrint}
+                onExportExcel={handleExportExcel}
+              />
+            )}
           </div>
         </div>
 
-        {/* Advanced Filter Wrapper */}
-        <div className="no-print mb-6">
-          <DocumentFilters
-            filters={filters}
-            onChange={setFilters}
-            branches={branches}
-            onReset={handleResetFilters}
-            visible={showFilters}
-            availableYears={availableYears}
-            packageOptions={packageOptions}
-          />
-        </div>
+        {/* Advanced Filter Wrapper (for Shipment Statement) */}
+        {docType !== "billing" && (
+          <div className="no-print mb-6">
+            <DocumentFilters
+              filters={filters}
+              onChange={setFilters}
+              branches={branches}
+              onReset={handleResetFilters}
+              visible={showFilters}
+              availableYears={availableYears}
+              packageOptions={packageOptions}
+            />
+          </div>
+        )}
 
         {/* Main Document Preview Layout Panel */}
         <div className="doc-preview-wrapper flex-1 flex flex-col items-center">
-          {loading ? (
+          {docType === "billing" ? (
+            <CompanyBillingWizard
+              shipments={shipments}
+              companies={companies}
+              branches={branches}
+              availableYears={availableYears}
+              packageOptions={packageOptions}
+              filters={filters}
+              onFiltersChange={setFilters}
+              onResetFilters={handleResetFilters}
+            />
+          ) : loading ? (
             <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
               <svg className="animate-spin h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

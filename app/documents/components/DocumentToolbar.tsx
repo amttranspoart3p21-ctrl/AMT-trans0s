@@ -53,13 +53,7 @@ export default function DocumentToolbar({
           📤 Export Excel
         </button>
 
-        <button
-          disabled
-          className="px-4.5 py-2 bg-gradient-to-r from-emerald-800/40 to-teal-800/40 text-slate-500 text-xs font-bold rounded-xl shadow-lg cursor-not-allowed flex items-center gap-1.5 border border-slate-800/50"
-          title="Generate final invoice (Reserved)"
-        >
-          ⚙️ Generate
-        </button>
+      
       </div>
     </div>
   );

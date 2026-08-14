@@ -15,7 +15,7 @@
 @media print {
   @page {
     size: A4 landscape;
-    margin: 6mm;
+    margin: 4mm 5mm;
   }
 
   /* Reset layout backgrounds and force full-page flow */
@@ -28,15 +28,42 @@
     overflow: visible !important;
   }
 
-  /* Reset all layout wrappers above #printable-document to display: block and 100% width */
-  body, html, main,
+  /* Completely hide all non-printable application UI elements and sidebar components */
+  aside,
+  aside *,
+  header,
+  header *,
+  nav,
+  nav *,
+  footer,
+  footer *,
+  .no-print,
+  .no-print *,
+  button,
+  select,
+  input,
+  a,
+  [role="navigation"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+  }
+
+  /* Reset layout wrappers leading to #printable-document to display: block and 100% width.
+     Note: Exclude generic utility classes like .h-full, .overflow-hidden, .overflow-y-auto to prevent matching hidden UI elements */
+  main,
   .min-h-screen,
   .flex-1,
   .h-screen,
   .w-screen,
-  .overflow-hidden,
-  .overflow-y-auto,
-  .h-full,
   .doc-page-container,
   .doc-preview-wrapper,
   .doc-layout-outer {
@@ -53,16 +80,17 @@
     overflow: visible !important;
     display: block !important;
     position: static !important;
+    float: none !important;
   }
 
-  /* Stylize A4 document container specifically to cover full page width */
+  /* Stylize printable document container to cover full page width cleanly */
   #printable-document {
     display: block !important;
     position: static !important;
     width: 100% !important;
-    max-width: none !important;
+    max-width: 100% !important;
     min-height: 0 !important;
-    padding: 6mm !important;
+    padding: 2mm 0 !important;
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
@@ -72,85 +100,16 @@
 
   .print-table-container {
     display: block !important;
+    width: 100% !important;
     flex: none !important;
     height: auto !important;
     min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .mt-auto {
     margin-top: 15px !important;
-  }
-
-  /* Hide the screen header completely during print */
-  .doc-header-container {
-    display: none !important;
-  }
-
-  /* Dedicated compact print header style */
-  .print-only-header {
-    display: block !important;
-    border-bottom: 2px solid #000000 !important;
-    padding-bottom: 6px !important;
-    margin-bottom: 10px !important;
-    font-family: inherit !important;
-  }
-
-  .print-header-top {
-    text-align: center !important;
-    margin-bottom: 8px !important;
-  }
-
-  .print-brand-title {
-    font-size: 13px !important;
-    font-weight: 900 !important;
-    letter-spacing: 0.5px !important;
-    line-height: 1.1 !important;
-    text-transform: uppercase !important;
-  }
-
-  .print-brand-subtitle {
-    font-size: 8.5px !important;
-    font-weight: 700 !important;
-    color: #475569 !important;
-    margin-top: 1px !important;
-  }
-
-  .print-brand-details {
-    font-size: 7.5px !important;
-    color: #475569 !important;
-    margin-top: 3px !important;
-    line-height: 1.2 !important;
-  }
-
-  .print-header-title-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: flex-end !important;
-    margin-top: 6px !important;
-    border-top: 1px solid #cbd5e1 !important;
-    padding-top: 4px !important;
-  }
-
-  .print-doc-title {
-    font-size: 10px !important;
-    font-weight: 800 !important;
-    text-transform: uppercase !important;
-    margin: 0 !important;
-  }
-
-  .print-doc-meta {
-    font-size: 7.5px !important;
-    font-weight: 700 !important;
-    color: #475569 !important;
-  }
-
-  .print-context-row {
-    font-size: 7.5px !important;
-    margin-top: 4px !important;
-    background: #f8fafc !important;
-    padding: 3px 6px !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 4px !important;
   }
 
   /* Format tables cleanly for print grids */
@@ -158,13 +117,15 @@
     overflow: visible !important;
     border: none !important;
     border-radius: 0 !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
   }
 
   table {
     border-collapse: collapse !important;
     width: 100% !important;
     table-layout: fixed !important;
+    margin: 0 !important;
   }
 
   thead {
@@ -179,65 +140,62 @@
   th {
     background-color: #f1f5f9 !important;
     color: #0f172a !important;
-    border: 1px solid #94a3b8 !important;
+    border: 1px solid #64748b !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    font-size: 7.5px !important;
-    font-weight: 900 !important;
-    line-height: 1.2 !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
     padding: 3px 2px !important;
     word-break: break-word !important;
     overflow: hidden !important;
+    text-align: inherit;
   }
 
   td {
     border: 1px solid #cbd5e1 !important;
-    color: #1e293b !important;
-    font-size: 7px !important;
-    line-height: 1.2 !important;
+    color: #0f172a !important;
+    font-size: 7.5px !important;
+    line-height: 1.25 !important;
     padding: 3px 2px !important;
-    word-break: break-all !important;
+    word-break: break-word !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
-  /* Precise A4 Landscape percentages for 22 columns */
-  .col-sNo { width: 3% !important; }
-  .col-date { width: 6% !important; }
-  .col-vehicleNumber { width: 5.5% !important; }
-  .col-fromAmtBranch { width: 3% !important; }
-  .col-fromCompany { width: 6% !important; }
-  .col-toAmtBranch { width: 3% !important; }
-  .col-toCompany { width: 6% !important; }
-  .col-packageType { width: 5% !important; }
-  .col-quantity { width: 3.5% !important; }
-  .col-ourInvoiceNumber { width: 4.5% !important; }
-  .col-customerInvoiceNumber { width: 4.5% !important; }
-  .col-paymentCompany { width: 6% !important; }
-  .col-paymentReceivingBranch { width: 5% !important; }
-  .col-pickupService { width: 4% !important; }
-  .col-deliveryService { width: 4% !important; }
-  .col-deliveryStatus { width: 4.5% !important; }
+  /* Optimal A4 Landscape percentage allocation summing to 100% for 22 columns */
+  .col-sNo { width: 2.5% !important; }
+  .col-date { width: 5.5% !important; }
+  .col-vehicleNumber { width: 6.0% !important; }
+  .col-fromAmtBranch { width: 3.0% !important; }
+  .col-fromCompany { width: 6.5% !important; }
+  .col-toAmtBranch { width: 3.0% !important; }
+  .col-toCompany { width: 6.5% !important; }
+  .col-packageType { width: 4.5% !important; }
+  .col-quantity { width: 3.0% !important; }
+  .col-ourInvoiceNumber { width: 4.0% !important; }
+  .col-customerInvoiceNumber { width: 4.0% !important; }
+  .col-paymentCompany { width: 6.5% !important; }
+  .col-paymentReceivingBranch { width: 5.0% !important; }
+  .col-pickupService { width: 4.0% !important; }
+  .col-deliveryService { width: 4.0% !important; }
+  .col-deliveryStatus { width: 5.0% !important; }
   .col-transportRate { width: 4.5% !important; }
-  .col-pickupCharge { width: 4% !important; }
-  .col-deliveryCharge { width: 4% !important; }
-  .col-pricePerPiece { width: 4% !important; }
+  .col-pickupCharge { width: 3.5% !important; }
+  .col-deliveryCharge { width: 3.5% !important; }
+  .col-pricePerPiece { width: 4.0% !important; }
   .col-totalAmount { width: 5.5% !important; }
-  .col-paymentStatus { width: 4% !important; }
+  .col-paymentStatus { width: 5.5% !important; }
 
-  /* Ensure the no-print selector absolutely wins and hides elements */
-  body .no-print,
-  html .no-print,
-  #printable-document .no-print,
-  .no-print,
-  button,
-  select,
-  input,
-  header,
-  nav,
-  aside,
-  footer,
-  a {
-    display: none !important;
+  /* Tax Invoice specific print overrides */
+  .tax-invoice-document table th {
+    font-size: 9.5px !important;
+    font-weight: 800 !important;
+    padding: 4px 3px !important;
+  }
+
+  .tax-invoice-document table td {
+    font-size: 9px !important;
+    padding: 4px 3px !important;
   }
 }

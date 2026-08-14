@@ -34,8 +34,8 @@ export async function generateShipmentId(): Promise<string> {
     .padStart(6, "0")}`;
 }
 
-import { resolveCompanyDetails } from "./shipment-shared";
-export { resolveCompanyDetails };
+import { resolveCompanyDetails, resolvePaymentContext } from "./shipment-shared";
+export { resolveCompanyDetails, resolvePaymentContext };
 
 export async function resolveCompanyNamesInShipment<T extends Partial<Shipment>>(shipment: T): Promise<T> {
   const companies = await readCompanies();
