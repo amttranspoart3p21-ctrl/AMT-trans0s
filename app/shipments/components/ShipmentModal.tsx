@@ -102,19 +102,7 @@ export default function ShipmentModal({
       }
     }
 
-    if (field === "fromAmtBranch") {
-      const validFromCompanies = companies.filter((c) => c.branchName === value).map((c) => c.companyName);
-      if (updated.fromCompany && !validFromCompanies.includes(updated.fromCompany)) {
-        autoFills.fromCompany = "";
-      }
-    }
 
-    if (field === "toAmtBranch") {
-      const validToCompanies = companies.filter((c) => c.branchName === value).map((c) => c.companyName);
-      if (updated.toCompany && !validToCompanies.includes(updated.toCompany)) {
-        autoFills.toCompany = "";
-      }
-    }
 
     updated = { ...updated, ...autoFills };
 

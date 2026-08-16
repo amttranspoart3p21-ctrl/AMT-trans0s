@@ -5,18 +5,31 @@ from paddleocr import PaddleOCR
 from ocr import PaddleOCRParser, RowGrouper, RowFilter, ColumnMapper, QuoteResolver
 
 
-def validate_quantity_string(qty_str: str) -> bool:
+def normalize_quantity_text(qty_str: str) -> str:
     clean = qty_str.strip()
     if not clean:
+        return ""
+    if clean in ('I', 'i', 'l', '|', '!', 'L'):
+        return '1'
+    res = clean
+    for char in ('I', 'i', 'l', '|', '!', 'L'):
+        res = re.sub(r'(?<=[\d*xX×\s])' + re.escape(char) + r'(?=[\d*xX×\s]|$)', '1', res)
+        res = re.sub(r'^' + re.escape(char) + r'(?=[\d*xX×\s])', '1', res)
+    return res
+
+
+def validate_quantity_string(qty_str: str) -> bool:
+    norm = normalize_quantity_text(qty_str)
+    if not norm:
         return False
     
     # Match numbers separated by x, X, *, or ×
     pattern = r'^\d+(?:\s*[xX*×]\s*\d+)*$'
-    if not re.match(pattern, clean):
+    if not re.match(pattern, norm):
         return False
         
     # Extract all numbers and ensure they are positive (> 0)
-    numbers = [int(n) for n in re.findall(r'\d+', clean)]
+    numbers = [int(n) for n in re.findall(r'\d+', norm)]
     if any(n <= 0 for n in numbers):
         return False
         
@@ -34,7 +47,7 @@ def validate_shipment(row_number: int, cols: list) -> dict:
     customer_invoice = cols[1].strip()
     to_company = cols[2].strip()
     package_type = cols[3].strip()
-    quantity = cols[4].strip()
+    quantity = normalize_quantity_text(cols[4].strip())
 
     errors = []
 

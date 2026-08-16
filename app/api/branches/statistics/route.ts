@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getBranchStatistics } from "@/services/branch.service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const statistics = await getBranchStatistics();

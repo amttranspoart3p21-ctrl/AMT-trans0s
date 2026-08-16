@@ -461,11 +461,10 @@ export default function Dashboard() {
       const resData = await response.json();
       setSaveResult(resData);
 
-      if (resData.success) {
-        alert(`Successfully saved ${resData.totalSaved} shipments to Excel!`);
+      if (resData.success && resData.totalSaved > 0) {
+        alert(`Successfully saved ${resData.totalSaved} shipment(s) to Excel!`);
         setShipments([]);
         setCoordinates({});
-        // AI state cleanups removed
         setUploadFile(null);
         setActiveFilename("");
         setMetadata({
@@ -475,6 +474,9 @@ export default function Dashboard() {
           fromAmtBranch: "",
           toAmtBranch: "",
         });
+      } else {
+        const errorDetail = resData.failedRows?.[0]?.error || "No shipments were saved. Please verify row details and date.";
+        alert(`Failed to save shipments to Excel: ${errorDetail}`);
       }
     } catch (err: any) {
       alert(err.message || "An error occurred while saving shipments.");

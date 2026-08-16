@@ -877,29 +877,7 @@ export default function ShipmentWorkspace({
       }
     }
 
-    // 2. Branch integrity logic
-    if ("fromAmtBranch" in updatedFields) {
-      const value = currentRecord.fromAmtBranch;
-      const branchObj = branches.find((b) => b.branchName?.trim().toLowerCase() === value?.trim().toLowerCase());
-      const validFromCompanies = companies
-        .filter((c) => branchObj && c.branchId === branchObj.branchId)
-        .map((c) => c.companyName);
-      if (currentRecord.fromCompany && !validFromCompanies.includes(currentRecord.fromCompany) && !("fromCompany" in updatedFields)) {
-        autoFills.fromCompany = "";
-        currentRecord.fromCompany = "";
-      }
-    }
-    if ("toAmtBranch" in updatedFields) {
-      const value = currentRecord.toAmtBranch;
-      const branchObj = branches.find((b) => b.branchName?.trim().toLowerCase() === value?.trim().toLowerCase());
-      const validToCompanies = companies
-        .filter((c) => branchObj && c.branchId === branchObj.branchId)
-        .map((c) => c.companyName);
-      if (currentRecord.toCompany && !validToCompanies.includes(currentRecord.toCompany) && !("toCompany" in updatedFields)) {
-        autoFills.toCompany = "";
-        currentRecord.toCompany = "";
-      }
-    }
+
 
     // 3. Dynamic package validation logic
     if (

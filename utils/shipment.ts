@@ -18,9 +18,16 @@ interface ShipmentCounter {
 }
 
 export async function generateShipmentId(): Promise<string> {
-  const file = await fs.readFile(COUNTER_FILE, "utf-8");
+  const dir = path.dirname(COUNTER_FILE);
+  await fs.mkdir(dir, { recursive: true });
 
-  const counter: ShipmentCounter = JSON.parse(file);
+  let counter: ShipmentCounter = { lastShipmentNumber: 0 };
+  try {
+    const file = await fs.readFile(COUNTER_FILE, "utf-8");
+    counter = JSON.parse(file);
+  } catch {
+    // If file doesn't exist, start with 0
+  }
 
   counter.lastShipmentNumber++;
 
@@ -63,6 +70,15 @@ export async function resolveCompanyNamesInShipment<T extends Partial<Shipment>>
   return resolved;
 }
 
+export function normalizeQuantityString(qty: string | number | null | undefined): string {
+  if (qty === null || qty === undefined) return "";
+  const str = String(qty).trim();
+  if (str === "I" || str === "i" || str === "l" || str === "|" || str === "!" || str === "L") {
+    return "1";
+  }
+  return str.replace(/(?<=[0-9xX*×\s]|^)[Iil|!L](?=[0-9xX*×\s]|$)/g, "1");
+}
+
 export function calculateQuantity(qty: string | number | null | undefined): number {
   if (qty === null || qty === undefined) {
     return 1;
@@ -70,7 +86,7 @@ export function calculateQuantity(qty: string | number | null | undefined): numb
   if (typeof qty === "number") {
     return qty;
   }
-  const clean = qty.trim();
+  const clean = normalizeQuantityString(qty);
   if (clean === "") {
     return 1;
   }

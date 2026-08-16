@@ -8,7 +8,11 @@ export async function POST(request: Request) {
     let filename = "sample.jpg";
 
     const processOCR = (resolvedFilename: string) => {
-      const pythonPath = path.join(process.cwd(), "python", "venv", "Scripts", "python.exe");
+      let pythonPath = path.join(process.cwd(), "python", "venv", "Scripts", "python.exe");
+      if (!fs.existsSync(pythonPath)) {
+        // Fallback to system python if venv does not exist
+        pythonPath = "python";
+      }
       const scriptPath = path.join(process.cwd(), "python", "main.py");
       
       const storageDir = path.join(process.cwd(), "storage", "images");

@@ -215,8 +215,14 @@ export default function BranchesPage() {
     setStatsError("");
     try {
       const res = await fetch("/api/branches/statistics");
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
+      const text = await res.text();
+      let json: any;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned HTML error page (${res.status} ${res.statusText || ""})`);
+      }
+      if (!res.ok || !json.success) throw new Error(json.message || `Failed to load statistics (${res.status})`);
       setStats(json.data);
     } catch (err) {
       setStatsError(err instanceof Error ? err.message : "Failed to load statistics.");
@@ -243,8 +249,14 @@ export default function BranchesPage() {
       if (statusVal !== "All") params.set("status", statusVal);
 
       const res = await fetch(`/api/branches?${params.toString()}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
+      const text = await res.text();
+      let json: any;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned HTML error page (${res.status} ${res.statusText || ""})`);
+      }
+      if (!res.ok || !json.success) throw new Error(json.message || `Failed to load branches (${res.status})`);
 
       // Check if current page is empty/invalid due to deletion, adjust page if so
       if (json.data.length === 0 && json.pagination.page > 1 && json.pagination.page > json.pagination.totalPages) {

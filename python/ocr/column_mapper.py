@@ -1,18 +1,39 @@
+import re
 from typing import List, Dict
 from .models import OCRRow, OCRItem
+
+
+def normalize_quantity_token(text_clean: str) -> str:
+    clean = text_clean.strip()
+    if not clean:
+        return clean
+    if clean in ('I', 'i', 'l', '|', '!', 'L'):
+        return '1'
+    res = clean
+    for char in ('I', 'i', 'l', '|', '!', 'L'):
+        res = re.sub(r'(?<=[\d*xX×\s])' + re.escape(char) + r'(?=[\d*xX×\s]|$)', '1', res)
+        res = re.sub(r'^' + re.escape(char) + r'(?=[\d*xX×\s])', '1', res)
+    return res
 
 
 class ColumnMapper:
     """Assigns OCRItems in a row into the deterministic 5 table columns using X-coordinates and heuristic rules."""
 
-    def __init__(self):
-        # Known centroids for the 5 columns:
-        # Col 1: From Company
-        # Col 2: Customer Company Invoice Number
-        # Col 3: To Company
-        # Col 4: Package Type (covers payment status/package type)
-        # Col 5: Quantity
-        self.centroids = [180.0, 350.0, 540.0, 705.0, 810.0]
+    def __init__(self, page_width: float = 900.0):
+        # Base reference centroids for 900px wide reference image:
+        # Col 1: From Company (~180px)
+        # Col 2: Customer Company Invoice Number (~350px)
+        # Col 3: To Company (~540px)
+        # Col 4: Package Type (~705px)
+        # Col 5: Quantity (~810px)
+        self.default_centroids = [180.0, 350.0, 540.0, 705.0, 810.0]
+        self.relative_ratios = [c / 900.0 for c in self.default_centroids]
+        self.centroids = list(self.default_centroids)
+
+    def update_centroids_for_width(self, width: float):
+        """Dynamically scale column centroids based on actual detected document width."""
+        if width > 100:
+            self.centroids = [r * width for r in self.relative_ratios]
 
     def map_row(self, row: OCRRow) -> List[str]:
         """Map each item in the row to its closest column centroid with heuristic overrides."""
@@ -30,12 +51,15 @@ class ColumnMapper:
             text_clean = item.text.strip()
             text_lower = text_clean.lower()
 
+            # Normalize common OCR/handwriting misreads for quantity ('I', 'l', '|', '!', 'L' -> '1')
+            norm_qty_text = normalize_quantity_token(text_clean)
+
             # Find closest centroid (1-based index)
             col_idx = min(range(5), key=lambda i: abs(self.centroids[i] - x)) + 1
 
-            # Rule 1: If it is the last item and is numeric, it belongs in Column 5 (Quantity)
+            # Rule 1: If it is the last item and is numeric (or normalized 1/quantity format), it belongs in Column 5 (Quantity)
             is_last = (idx == len(sorted_items) - 1)
-            is_numeric = text_clean.isdigit() or text_clean.replace('.', '', 1).isdigit()
+            is_numeric = norm_qty_text.isdigit() or norm_qty_text.replace('.', '', 1).isdigit() or bool(re.match(r'^\d+(?:\s*[xX*×]\s*\d+)*$', norm_qty_text))
             if is_last and is_numeric and col_idx < 5:
                 col_idx = 5
 
@@ -63,7 +87,10 @@ class ColumnMapper:
             if items_in_col:
                 # Sort items in the same column by x_min to keep reading order left-to-right
                 sorted_col_items = sorted(items_in_col, key=lambda item: item.box.x_min)
-                columns.append(" ".join(item.text for item in sorted_col_items))
+                col_text = " ".join(item.text for item in sorted_col_items)
+                if col_idx == 5:
+                    col_text = normalize_quantity_token(col_text)
+                columns.append(col_text)
             else:
                 columns.append("")
 
@@ -138,5 +165,10 @@ class ColumnMapper:
 
     def map_rows(self, rows: List[OCRRow]) -> List[List[str]]:
         """Map a list of OCRRows to a 2D list of mapped string values with post-processing."""
+        all_items = [item for r in rows for item in r.items]
+        if all_items:
+            max_x = max(item.box.x_max for item in all_items)
+            self.update_centroids_for_width(max_x)
+
         mapped = [self.map_row(row) for row in rows]
         return self.post_process_rows(mapped)
