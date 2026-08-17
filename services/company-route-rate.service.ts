@@ -183,23 +183,52 @@ export async function createCompanyRouteRate(
     throw new Error("From Branch and To Branch cannot be the same.");
   }
 
-  if (company.branchId !== fromBranch.branchId && company.branchId !== toBranch.branchId) {
-    throw new Error("The selected company's home branch must match either the From Branch or the To Branch.");
+  if (rateData.companySide === "FROM") {
+    const isBranchMatch =
+      company.branchId === fromBranch.branchId ||
+      company.branchName.trim().toLowerCase() === fromBranch.branchName.trim().toLowerCase();
+    if (!isBranchMatch) {
+      throw new Error("Company is not registered under the selected From Branch.");
+    }
+  } else if (rateData.companySide === "TO") {
+    const isBranchMatch =
+      company.branchId === toBranch.branchId ||
+      company.branchName.trim().toLowerCase() === toBranch.branchName.trim().toLowerCase();
+    if (!isBranchMatch) {
+      throw new Error("Company is not registered under the selected To Branch.");
+    }
+  } else {
+    throw new Error("Company Side must be either FROM or TO.");
   }
 
   // Validate Package
   const packages = await readPackages();
+  let pkg: (typeof packages)[number] | undefined;
 
-  const pkg = packages.find(
-    (p) =>
-      p.packageId === rateData.packageId ||
-      (rateData.packageName &&
-        p.packageName.trim().toLowerCase() ===
-          rateData.packageName.trim().toLowerCase())
-  );
-
-  if (!pkg) {
-    throw new Error("Package not found.");
+  if (rateData.packageId?.trim()) {
+    pkg = packages.find((p) => p.packageId.trim() === rateData.packageId!.trim());
+    if (!pkg) {
+      throw new Error(`Package with ID '${rateData.packageId}' not found.`);
+    }
+  } else if (rateData.packageName?.trim()) {
+    const pkgNameClean = rateData.packageName.trim().toLowerCase();
+    if (rateData.companyId?.trim()) {
+      pkg = packages.find(
+        (p) =>
+          p.companyId === rateData.companyId!.trim() &&
+          p.packageName.trim().toLowerCase() === pkgNameClean
+      );
+    }
+    if (!pkg) {
+      pkg = packages.find(
+        (p) => !p.companyId && p.packageName.trim().toLowerCase() === pkgNameClean
+      );
+    }
+    if (!pkg) {
+      throw new Error(`Package '${rateData.packageName}' not found.`);
+    }
+  } else {
+    throw new Error("Package ID or Package Name is required.");
   }
 
   const packageId = pkg.packageId;
@@ -224,6 +253,7 @@ export async function createCompanyRouteRate(
   const routeRateExists = rates.some(
     (item) =>
       item.companyId === fullRateData.companyId &&
+      item.companySide === fullRateData.companySide &&
       item.fromBranchId === fullRateData.fromBranchId &&
       item.toBranchId === fullRateData.toBranchId &&
       item.packageId === fullRateData.packageId
@@ -355,8 +385,22 @@ export async function updateCompanyRouteRate(
     throw new Error("From Branch and To Branch cannot be the same.");
   }
 
-  if (company.branchId !== fromBranch.branchId && company.branchId !== toBranch.branchId) {
-    throw new Error("The selected company's home branch must match either the From Branch or the To Branch.");
+  if (rateData.companySide === "FROM") {
+    const isBranchMatch =
+      company.branchId === fromBranch.branchId ||
+      company.branchName.trim().toLowerCase() === fromBranch.branchName.trim().toLowerCase();
+    if (!isBranchMatch) {
+      throw new Error("Company is not registered under the selected From Branch.");
+    }
+  } else if (rateData.companySide === "TO") {
+    const isBranchMatch =
+      company.branchId === toBranch.branchId ||
+      company.branchName.trim().toLowerCase() === toBranch.branchName.trim().toLowerCase();
+    if (!isBranchMatch) {
+      throw new Error("Company is not registered under the selected To Branch.");
+    }
+  } else {
+    throw new Error("Company Side must be either FROM or TO.");
   }
 
   const packages = await readPackages();
@@ -386,6 +430,7 @@ export async function updateCompanyRouteRate(
     (item) =>
       item.companyRouteRateId !== companyRouteRateId &&
       item.companyId === fullRateData.companyId &&
+      item.companySide === fullRateData.companySide &&
       item.fromBranchId === fullRateData.fromBranchId &&
       item.toBranchId === fullRateData.toBranchId &&
       item.packageId === fullRateData.packageId

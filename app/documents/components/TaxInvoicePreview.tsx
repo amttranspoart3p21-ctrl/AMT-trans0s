@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import type { ShipmentRecord } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
+import { getCompanySettings, DEFAULT_COMPANY_SETTINGS, type CompanySettings } from "@/utils/settings";
 
 export interface InvoiceHeaderDetails {
   gstinNo: string;
@@ -41,6 +42,15 @@ export default function TaxInvoicePreview({
   customerDetails,
   bankDetails,
 }: TaxInvoicePreviewProps) {
+  // Load company settings from localStorage (client-side only)
+  const [settings, setSettings] = useState<CompanySettings>(DEFAULT_COMPANY_SETTINGS);
+  useEffect(() => {
+    setSettings(getCompanySettings());
+  }, []);
+
+  const phoneDisplay = [settings.phoneNumber1, settings.phoneNumber2]
+    .filter(Boolean)
+    .join(" / ");
   // Resolve branch codes cleanly for display
   const resolveBranchCode = (val: string): string => {
     if (!val) return "-";
@@ -59,6 +69,26 @@ export default function TaxInvoicePreview({
     const comp = (company || "").trim();
     const bCode = resolveBranchCode(branchVal || "");
     const branchStr = bCode && bCode !== "-" ? bCode : (branchVal || "").trim();
+
+    if (comp && branchStr) {
+      return `${comp} - ${branchStr}`;
+    }
+    return comp || branchStr || "-";
+  };
+
+  const formatPaymentCompany = (s: ShipmentRecord): string => {
+    const comp = (s.paymentCompany || "").trim();
+    if (!comp) return "-";
+
+    let branchVal = (s.paymentReceivingBranch || "").trim();
+    if (branchVal.toLowerCase() === "from company" || branchVal.toLowerCase() === "from branch") {
+      branchVal = s.fromAmtBranch || "";
+    } else if (branchVal.toLowerCase() === "to company" || branchVal.toLowerCase() === "to branch") {
+      branchVal = s.toAmtBranch || "";
+    }
+
+    const bCode = resolveBranchCode(branchVal);
+    const branchStr = bCode && bCode !== "-" ? bCode : branchVal;
 
     if (comp && branchStr) {
       return `${comp} - ${branchStr}`;
@@ -99,22 +129,36 @@ export default function TaxInvoicePreview({
       >
         {/* Top Header Branding */}
         <div className="border-b-2 border-slate-900 pb-4 mb-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-black uppercase tracking-wider text-slate-900">
-              INVOICE
-            </h1>
-            <h2 className="text-xl font-extrabold uppercase text-violet-950 mt-1">
-              TMS TRANSOS
-            </h2>
-            <p className="text-xs font-semibold text-slate-600 mt-0.5">
-              Transport Management System
-            </p>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">
-              Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802
-            </p>
-            <p className="text-[10.5px] text-slate-500 font-semibold mt-0.5">
-              Phone: +91 98765 43210 / +91 87654 32109 | Email: billing@tms-transport.com
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            {/* Company info (left/center) */}
+            <div className="flex-1 text-center">
+              <h2 className="text-xl font-extrabold uppercase text-violet-950 mt-1">
+                {settings.companyName || DEFAULT_COMPANY_SETTINGS.companyName}
+              </h2>
+              <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                Transport Management System
+              </p>
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
+                {settings.address || DEFAULT_COMPANY_SETTINGS.address}
+              </p>
+              <p className="text-[10.5px] text-slate-500 font-semibold mt-0.5">
+                {phoneDisplay && `Phone: ${phoneDisplay}`}
+                {phoneDisplay && settings.email && " | "}
+                {settings.email && `Email: ${settings.email}`}
+              </p>
+            </div>
+            {/* Logo (right) */}
+            {settings.logo ? (
+              <img
+                src={settings.logo}
+                alt="Company Logo"
+                className="h-16 w-16 object-contain rounded-lg shrink-0 border border-slate-200"
+              />
+            ) : (
+              <div className="h-16 w-16 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 text-slate-400 font-bold text-[10px] tracking-wider select-none bg-slate-50">
+                LOGO
+              </div>
+            )}
           </div>
         </div>
 
@@ -168,21 +212,22 @@ export default function TaxInvoicePreview({
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-300 text-slate-900 font-extrabold uppercase text-[10px]">
-                <th className="py-2.5 px-2 text-center border-r border-slate-300 w-[5%]">S.No</th>
-                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[11%]">Date</th>
-                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[10%]">DC No</th>
-                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[17%]">From</th>
-                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[17%]">To</th>
-                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[18%]">Service Description</th>
-                <th className="py-2.5 px-2 text-center border-r border-slate-300 w-[6%]">Qty</th>
+                <th className="py-2.5 px-2 text-center border-r border-slate-300 w-[4%]">S.No</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[9%]">Date</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[9%]">DC No</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[14%]">From</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[14%]">To</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[15%]">Payment Company</th>
+                <th className="py-2.5 px-2 text-left border-r border-slate-300 w-[15%]">Service Description</th>
+                <th className="py-2.5 px-2 text-center border-r border-slate-300 w-[5%]">Qty</th>
                 <th className="py-2.5 px-2 text-right border-r border-slate-300 w-[8%]">Rate</th>
-                <th className="py-2.5 px-2 text-right w-[8%]">Total</th>
+                <th className="py-2.5 px-2 text-right w-[7%]">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {shipments.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 font-medium italic">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 font-medium italic">
                     No shipment records resolved for this billing context.
                   </td>
                 </tr>
@@ -191,6 +236,7 @@ export default function TaxInvoicePreview({
                   const dcNoDisplay = s.customerInvoiceNumber || "-";
                   const fromStr = formatCompanyBranch(s.fromCompany, s.fromAmtBranch);
                   const toStr = formatCompanyBranch(s.toCompany, s.toAmtBranch);
+                  const payCompStr = formatPaymentCompany(s);
                   const rateVal = s.pricePerPiece || s.transportRate || 0;
                   const totalVal = s.totalAmount || 0;
 
@@ -210,6 +256,9 @@ export default function TaxInvoicePreview({
                       </td>
                       <td className="py-2 px-2 text-left border-r border-slate-200 text-[10.5px] font-bold text-slate-800">
                         {toStr}
+                      </td>
+                      <td className="py-2 px-2 text-left border-r border-slate-200 text-[10.5px] font-bold text-slate-800">
+                        {payCompStr}
                       </td>
                       <td className="py-2 px-2 border-r border-slate-200 text-[10.5px] font-medium text-slate-800 truncate">
                         {s.packageType || "Transport Freight"}

@@ -1,10 +1,13 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import DocumentLayout from "./DocumentLayout";
 import DocumentHeader from "./DocumentHeader";
 import DocumentTable from "./DocumentTable";
 import TotalsSection from "./TotalsSection";
 import Pagination from "@/app/shipments/components/Pagination";
-import type { DocumentConfig } from "./document-config";
+import type { DocumentConfig, BrandingConfig } from "./document-config";
+import { getActiveBranding } from "./document-config";
 import type { Branch } from "@/types/branch";
 import type { ShipmentRecord } from "@/types/shipment";
 
@@ -31,6 +34,12 @@ export default function DocumentPreview({
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(20);
 
+  // Live branding from localStorage (overrides static config branding)
+  const [branding, setBranding] = useState<BrandingConfig>(config.branding);
+  useEffect(() => {
+    setBranding(getActiveBranding());
+  }, []);
+
   // Compute total pages
   const totalPages = Math.ceil(shipments.length / limit);
 
@@ -56,7 +65,7 @@ export default function DocumentPreview({
         {/* 1. Header with branding fields */}
         <DocumentHeader
           title={config.title}
-          branding={config.branding}
+          branding={branding}
           branchName={branchName}
           companyName={companyName}
           dateRange={dateRange}

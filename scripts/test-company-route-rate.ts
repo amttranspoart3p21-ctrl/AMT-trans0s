@@ -79,6 +79,7 @@ async function test() {
     const rate = await createCompanyRouteRate({
       companyId,
       companyName: company.companyName,
+      companySide: "FROM",
       fromBranchId,
       fromBranchName: branches[0].branchName,
       toBranchId,
@@ -102,6 +103,7 @@ async function test() {
     const updated = await updateCompanyRouteRate(rate.companyRouteRateId, {
       companyId,
       companyName: company.companyName,
+      companySide: "FROM",
       fromBranchId,
       fromBranchName: branches[0].branchName,
       toBranchId,

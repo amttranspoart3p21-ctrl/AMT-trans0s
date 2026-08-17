@@ -576,7 +576,8 @@ export async function getShipments(
       const cVal = filters.company.toLowerCase();
       list = list.filter(s =>
         (s.fromCompany && s.fromCompany.toLowerCase() === cVal) ||
-        (s.toCompany && s.toCompany.toLowerCase() === cVal)
+        (s.toCompany && s.toCompany.toLowerCase() === cVal) ||
+        (s.paymentCompany && s.paymentCompany.toLowerCase() === cVal)
       );
     }
     if (filters.deliveryStatus) {
@@ -662,6 +663,7 @@ export async function getShipments(
         s.vehicleNumber.toLowerCase().includes(q) ||
         (s.fromCompany && s.fromCompany.toLowerCase().includes(q)) ||
         (s.toCompany && s.toCompany.toLowerCase().includes(q)) ||
+        (s.paymentCompany && s.paymentCompany.toLowerCase().includes(q)) ||
         (s.ourInvoiceNumber && s.ourInvoiceNumber.toLowerCase().includes(q)) ||
         (s.customerInvoiceNumber && s.customerInvoiceNumber.toLowerCase().includes(q)) ||
         (s.packageType && s.packageType.toLowerCase().includes(q))

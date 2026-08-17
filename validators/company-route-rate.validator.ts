@@ -7,6 +7,10 @@ export function validateCompanyRouteRate(
     throw new Error("Company ID is required.");
   }
 
+  if (!rateData.companySide || !["FROM", "TO"].includes(rateData.companySide)) {
+    throw new Error("Company Side must be either FROM or TO.");
+  }
+
   if (!rateData.fromBranchId?.trim()) {
     throw new Error("From Branch ID is required.");
   }

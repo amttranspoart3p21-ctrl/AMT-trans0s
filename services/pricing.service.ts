@@ -19,6 +19,7 @@ function performCompanyRouteRateLookupAndLog(
   companyRates: any[],
   expectedCompanyId: string,
   expectedCompanyName: string,
+  expectedCompanySide: "FROM" | "TO" | undefined,
   expectedFromBranchId: string,
   expectedFromBranchName: string,
   expectedToBranchId: string,
@@ -36,6 +37,7 @@ function performCompanyRouteRateLookupAndLog(
   console.log(`Expected keys:`);
   console.log(`- Company Name   : ${expectedCompanyName}`);
   console.log(`- Company ID     : ${expectedCompanyId}`);
+  console.log(`- Company Side   : ${expectedCompanySide || "ANY"}`);
   console.log(`- From Branch ID : ${expectedFromBranchId} (${expectedFromBranchName})`);
   console.log(`- To Branch ID   : ${expectedToBranchId} (${expectedToBranchName})`);
   console.log(`- Package ID     : ${expectedPackageId} (${expectedPackageName})`);
@@ -51,16 +53,18 @@ function performCompanyRouteRateLookupAndLog(
     if (!isCompanyMatch) continue;
 
     // Company matched, this is a candidate!
+    const sideMatch = !c.companySide || !expectedCompanySide || c.companySide === expectedCompanySide;
     const fromBranchMatch = expectedFromBranchId ? (c.fromBranchId === expectedFromBranchId || c.fromBranchName.toLowerCase() === fromBranchKey) : c.fromBranchName.toLowerCase() === fromBranchKey;
     const toBranchMatch = expectedToBranchId ? (c.toBranchId === expectedToBranchId || c.toBranchName.toLowerCase() === toBranchKey) : c.toBranchName.toLowerCase() === toBranchKey;
     const packageMatch = expectedPackageId ? (c.packageId === expectedPackageId || c.packageName.toLowerCase() === packageKey) : c.packageName.toLowerCase() === packageKey;
 
-    const isMatch = fromBranchMatch && toBranchMatch && packageMatch;
+    const isMatch = sideMatch && fromBranchMatch && toBranchMatch && packageMatch;
 
     candidates.push({
       rate: c,
       checks: {
         companyId: true,
+        companySide: sideMatch,
         fromBranch: fromBranchMatch,
         toBranch: toBranchMatch,
         package: packageMatch
@@ -79,12 +83,13 @@ function performCompanyRouteRateLookupAndLog(
       const c = cand.rate;
       const ch = cand.checks;
       console.log(`Candidate #${idx + 1}:`);
-      console.log(`  Row Details: CompanyId=${c.companyId}, FromBranchId=${c.fromBranchId} (${c.fromBranchName}), ToBranchId=${c.toBranchId} (${c.toBranchName}), PackageId=${c.packageId} (${c.packageName})`);
+      console.log(`  Row Details: CompanyId=${c.companyId}, Side=${c.companySide}, FromBranchId=${c.fromBranchId} (${c.fromBranchName}), ToBranchId=${c.toBranchId} (${c.toBranchName}), PackageId=${c.packageId} (${c.packageName})`);
       console.log(`  Checks:`);
-      console.log(`    Company ID  : ✅`);
-      console.log(`    From Branch : ${ch.fromBranch ? "✅" : "❌ (Expected: " + (expectedFromBranchId || "none") + "/" + expectedFromBranchName + ", Found: " + c.fromBranchId + "/" + c.fromBranchName + ")"}`);
-      console.log(`    To Branch   : ${ch.toBranch ? "✅" : "❌ (Expected: " + (expectedToBranchId || "none") + "/" + expectedToBranchName + ", Found: " + c.toBranchId + "/" + c.toBranchName + ")"}`);
-      console.log(`    Package     : ${ch.package ? "✅" : "❌ (Expected: " + (expectedPackageId || "none") + "/" + expectedPackageName + ", Found: " + c.packageId + "/" + c.packageName + ")"}`);
+      console.log(`    Company ID   : ✅`);
+      console.log(`    Company Side : ${ch.companySide ? "✅" : "❌ (Expected: " + expectedCompanySide + ", Found: " + c.companySide + ")"}`);
+      console.log(`    From Branch  : ${ch.fromBranch ? "✅" : "❌ (Expected: " + (expectedFromBranchId || "none") + "/" + expectedFromBranchName + ", Found: " + c.fromBranchId + "/" + c.fromBranchName + ")"}`);
+      console.log(`    To Branch    : ${ch.toBranch ? "✅" : "❌ (Expected: " + (expectedToBranchId || "none") + "/" + expectedToBranchName + ", Found: " + c.toBranchId + "/" + c.toBranchName + ")"}`);
+      console.log(`    Package      : ${ch.package ? "✅" : "❌ (Expected: " + (expectedPackageId || "none") + "/" + expectedPackageName + ", Found: " + c.packageId + "/" + c.packageName + ")"}`);
     });
   } else {
     console.log(`\nNo candidates found for Company ID ${expectedCompanyId} in active rates.`);
@@ -154,6 +159,24 @@ export async function calculateShipmentPricing(
   const toCompanyId = toDetails.companyId;
   const toCompanyResolved = toDetails.companyName;
 
+  // Derive expected companySide for payment company from paymentReceivingBranch
+  let expectedPaymentCompanySide: "FROM" | "TO" = "FROM";
+  if (shipment.paymentReceivingBranch === "To Company") {
+    expectedPaymentCompanySide = "TO";
+  } else if (shipment.paymentReceivingBranch === "From Company") {
+    expectedPaymentCompanySide = "FROM";
+  } else {
+    const prbClean = (shipment.paymentReceivingBranch || "").trim().toLowerCase();
+    const toBranchClean = (resolvedShipment.toAmtBranch || "").trim().toLowerCase();
+    if (prbClean && toBranchClean && prbClean === toBranchClean) {
+      expectedPaymentCompanySide = "TO";
+    } else if (paymentCompanyId && toCompanyId && paymentCompanyId === toCompanyId) {
+      expectedPaymentCompanySide = "TO";
+    } else {
+      expectedPaymentCompanySide = "FROM";
+    }
+  }
+
   const fromBranchKey = (resolvedShipment.fromAmtBranch || "").trim().toLowerCase();
   const toBranchKey = (resolvedShipment.toAmtBranch || "").trim().toLowerCase();
   const getBasePackageName = (val: string): string => {
@@ -204,6 +227,7 @@ export async function calculateShipmentPricing(
       companyRates,
       paymentCompanyId,
       paymentCompanyResolved,
+      expectedPaymentCompanySide,
       fromBranchId,
       resolvedShipment.fromAmtBranch || "",
       toBranchId,
@@ -237,6 +261,7 @@ export async function calculateShipmentPricing(
         companyRates,
         fromCompanyId,
         fromCompanyResolved,
+        "FROM",
         fromBranchId,
         resolvedShipment.fromAmtBranch || "",
         toBranchId,
@@ -253,6 +278,7 @@ export async function calculateShipmentPricing(
         companyRates,
         toCompanyId,
         toCompanyResolved,
+        "TO",
         fromBranchId,
         resolvedShipment.fromAmtBranch || "",
         toBranchId,

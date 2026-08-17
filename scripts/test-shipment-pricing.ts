@@ -158,6 +158,7 @@ async function testPricing() {
     const companyRate = await createCompanyRouteRate({
       companyId: xyzCompany.companyId,
       companyName: xyzCompany.companyName,
+      companySide: "FROM",
       fromBranchId: chennaiBranch.branchId,
       fromBranchName: chennaiBranch.branchName,
       toBranchId: amburBranch.branchId,
@@ -175,6 +176,7 @@ async function testPricing() {
     const companyRateToCompany = await createCompanyRouteRate({
       companyId: abcCompany.companyId,
       companyName: abcCompany.companyName,
+      companySide: "TO",
       fromBranchId: chennaiBranch.branchId,
       fromBranchName: chennaiBranch.branchName,
       toBranchId: amburBranch.branchId,
@@ -215,6 +217,7 @@ async function testPricing() {
     const machinePartsRate = await createCompanyRouteRate({
       companyId: xyzCompany.companyId,
       companyName: xyzCompany.companyName,
+      companySide: "FROM",
       fromBranchId: chennaiBranch.branchId,
       fromBranchName: chennaiBranch.branchName,
       toBranchId: amburBranch.branchId,

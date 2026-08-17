@@ -158,10 +158,19 @@ export function resolvePaymentContext(
   }
 
   const prbLower = prb.toLowerCase();
+  const payCompTrim = (shipment.paymentCompany || "").trim();
+  const fromCompTrim = (shipment.fromCompany || "").trim();
+  const toCompTrim = (shipment.toCompany || "").trim();
+
+  // Check if paymentCompany is explicitly set to a THIRD-PARTY company (different from both fromCompany and toCompany)
+  const isThirdParty =
+    payCompTrim !== "" &&
+    payCompTrim.toLowerCase() !== fromCompTrim.toLowerCase() &&
+    payCompTrim.toLowerCase() !== toCompTrim.toLowerCase();
 
   // Case 1: Payment Branch = "From Company" or "From Branch"
   if (prbLower === "from company" || prbLower === "from branch") {
-    const pComp = (shipment.fromCompany || shipment.paymentCompany || "").trim();
+    const pComp = isThirdParty ? payCompTrim : (fromCompTrim || payCompTrim);
     const pBranch = resolveBranchCode(shipment.fromAmtBranch);
     return {
       paymentCompany: pComp || null,
@@ -171,7 +180,7 @@ export function resolvePaymentContext(
 
   // Case 2: Payment Branch = "To Company" or "To Branch"
   if (prbLower === "to company" || prbLower === "to branch") {
-    const pComp = (shipment.toCompany || shipment.paymentCompany || "").trim();
+    const pComp = isThirdParty ? payCompTrim : (toCompTrim || payCompTrim);
     const pBranch = resolveBranchCode(shipment.toAmtBranch);
     return {
       paymentCompany: pComp || null,
@@ -184,13 +193,15 @@ export function resolvePaymentContext(
   const fromBranchCode = resolveBranchCode(shipment.fromAmtBranch);
   const toBranchCode = resolveBranchCode(shipment.toAmtBranch);
 
-  let pComp = "";
-  if (toBranchCode && prbBranchCode && toBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
-    pComp = (shipment.toCompany || "").trim();
-  } else if (fromBranchCode && prbBranchCode && fromBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
-    pComp = (shipment.fromCompany || "").trim();
-  } else {
-    pComp = (shipment.paymentCompany || shipment.fromCompany || shipment.toCompany || "").trim();
+  let pComp = isThirdParty ? payCompTrim : "";
+  if (!pComp) {
+    if (toBranchCode && prbBranchCode && toBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
+      pComp = toCompTrim || payCompTrim;
+    } else if (fromBranchCode && prbBranchCode && fromBranchCode.toLowerCase() === prbBranchCode.toLowerCase()) {
+      pComp = fromCompTrim || payCompTrim;
+    } else {
+      pComp = payCompTrim || fromCompTrim || toCompTrim;
+    }
   }
 
   return {

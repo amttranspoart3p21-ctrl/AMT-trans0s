@@ -55,26 +55,29 @@ export async function readCompanyRouteRates(): Promise<CompanyRouteRate[]> {
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
 
-    const status = (row.getCell(13).value?.toString() as CompanyRouteRate["status"]) ?? "Active";
-    const inactiveReason = row.getCell(16).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+    const status = (row.getCell(14).value?.toString() as CompanyRouteRate["status"]) ?? "Active";
+    const inactiveReason = row.getCell(17).value?.toString() || (status === "Inactive" ? "manual" : undefined);
+    const sideRaw = row.getCell(4).value?.toString()?.toUpperCase();
+    const companySide: "FROM" | "TO" = sideRaw === "TO" ? "TO" : "FROM";
 
     rates.push({
       companyRouteRateId: row.getCell(1).value?.toString() ?? "",
       companyId: row.getCell(2).value?.toString() ?? "",
       companyName: row.getCell(3).value?.toString() ?? "",
-      fromBranchId: row.getCell(4).value?.toString() ?? "",
-      fromBranchName: row.getCell(5).value?.toString() ?? "",
-      toBranchId: row.getCell(6).value?.toString() ?? "",
-      toBranchName: row.getCell(7).value?.toString() ?? "",
-      packageId: row.getCell(8).value?.toString() ?? "",
-      packageName: row.getCell(9).value?.toString() ?? "",
-      transportRate: Number(row.getCell(10).value) || 0,
-      pickupCharge: Number(row.getCell(11).value) || 0,
-      deliveryCharge: Number(row.getCell(12).value) || 0,
+      companySide,
+      fromBranchId: row.getCell(5).value?.toString() ?? "",
+      fromBranchName: row.getCell(6).value?.toString() ?? "",
+      toBranchId: row.getCell(7).value?.toString() ?? "",
+      toBranchName: row.getCell(8).value?.toString() ?? "",
+      packageId: row.getCell(9).value?.toString() ?? "",
+      packageName: row.getCell(10).value?.toString() ?? "",
+      transportRate: Number(row.getCell(11).value) || 0,
+      pickupCharge: Number(row.getCell(12).value) || 0,
+      deliveryCharge: Number(row.getCell(13).value) || 0,
       status,
       inactiveReason,
-      createdAt: row.getCell(14).value?.toString() ?? "",
-      updatedAt: row.getCell(15).value?.toString() ?? "",
+      createdAt: row.getCell(15).value?.toString() ?? "",
+      updatedAt: row.getCell(16).value?.toString() ?? "",
     });
   });
 
@@ -102,6 +105,7 @@ export async function writeCompanyRouteRates(rates: CompanyRouteRate[]): Promise
       companyRouteRateId: rateItem.companyRouteRateId,
       companyId: rateItem.companyId,
       companyName: rateItem.companyName,
+      companySide: rateItem.companySide,
       fromBranchId: rateItem.fromBranchId,
       fromBranchName: rateItem.fromBranchName,
       toBranchId: rateItem.toBranchId,
@@ -118,6 +122,18 @@ export async function writeCompanyRouteRates(rates: CompanyRouteRate[]): Promise
     });
   });
 
-  await workbook.xlsx.writeFile(COMPANY_ROUTE_RATE_FILE);
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      await workbook.xlsx.writeFile(COMPANY_ROUTE_RATE_FILE);
+      break;
+    } catch (err: any) {
+      attempts++;
+      if (attempts >= 5 || (err.code !== "EBUSY" && !err.message?.includes("busy"))) {
+        throw err;
+      }
+      await new Promise((res) => setTimeout(res, 200 * attempts));
+    }
+  }
 }
 

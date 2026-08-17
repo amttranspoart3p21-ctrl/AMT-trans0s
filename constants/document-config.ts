@@ -1,4 +1,5 @@
 import type { ShipmentRecord } from "@/types/shipment";
+import { getCompanySettings } from "@/utils/settings";
 
 export interface ColumnConfig {
   header: string;
@@ -59,15 +60,34 @@ const sumAmounts = (shipments: ShipmentRecord[]): number => {
   return shipments.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 };
 
-// Default Branding details
+// Default Branding details (static fallback, also used during SSR)
 const defaultBranding: BrandingConfig = {
   companyName: "TMS TRANSOS",
   address: "Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802",
   phone: "+91 98765 43210 / +91 87654 32109",
   email: "billing@tms-transport.com",
   gstNumber: "33AABCA1234F1Z5",
-  logoUrl: "/logo-placeholder.png",
+  logoUrl: undefined,
 };
+
+/**
+ * Returns the active branding configuration by reading Company Information
+ * from localStorage (client-side). Falls back to defaultBranding during SSR
+ * or when no settings have been saved yet.
+ */
+export function getActiveBranding(): BrandingConfig {
+  if (typeof window === "undefined") return defaultBranding;
+  const s = getCompanySettings();
+  const phoneParts = [s.phoneNumber1, s.phoneNumber2].filter(Boolean);
+  return {
+    companyName: s.companyName || defaultBranding.companyName,
+    address: s.address || defaultBranding.address,
+    phone: phoneParts.length > 0 ? phoneParts.join(" / ") : defaultBranding.phone,
+    email: s.email || defaultBranding.email,
+    gstNumber: s.gstin || defaultBranding.gstNumber,
+    logoUrl: s.logo || undefined,
+  };
+}
 
 export const documentConfigurations: Record<string, DocumentConfig> = {
   shipment: {

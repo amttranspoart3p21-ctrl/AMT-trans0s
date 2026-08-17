@@ -5,6 +5,7 @@ export const COMPANY_ROUTE_RATE_COLUMNS: Partial<Column>[] = [
   { header: "Company Route Rate ID", key: "companyRouteRateId", width: 20 },
   { header: "Company ID", key: "companyId", width: 15 },
   { header: "Company Name", key: "companyName", width: 25 },
+  { header: "Company Side", key: "companySide", width: 15 },
   { header: "From Branch ID", key: "fromBranchId", width: 15 },
   { header: "From Branch Name", key: "fromBranchName", width: 25 },
   { header: "To Branch ID", key: "toBranchId", width: 15 },

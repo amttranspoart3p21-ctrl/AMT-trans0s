@@ -3,6 +3,7 @@ export interface CompanyRouteRate {
 
   companyId: string;
   companyName: string;
+  companySide: "FROM" | "TO";
 
   fromBranchId: string;
   fromBranchName: string;

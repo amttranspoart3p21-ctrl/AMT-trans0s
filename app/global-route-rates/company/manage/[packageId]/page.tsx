@@ -43,7 +43,9 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
   const [limit, setLimit] = useState(9);
 
   // Form state
-  const [toBranchId, setToBranchId] = useState("");
+  const [companySide, setCompanySide] = useState<"FROM" | "TO">("FROM");
+  const [selectedFromBranchId, setSelectedFromBranchId] = useState("");
+  const [selectedToBranchId, setSelectedToBranchId] = useState("");
   const [transportRateInput, setTransportRateInput] = useState("");
   const [pickupChargeInput, setPickupChargeInput] = useState("0");
   const [deliveryChargeInput, setDeliveryChargeInput] = useState("0");
@@ -54,6 +56,8 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
 
   // Modal state
   const [editRoute, setEditRoute] = useState<CompanyRouteRate | null>(null);
+  const [editCompanySide, setEditCompanySide] = useState<"FROM" | "TO">("FROM");
+  const [editFromBranchId, setEditFromBranchId] = useState("");
   const [editToBranchId, setEditToBranchId] = useState("");
   const [editTransportRate, setEditTransportRate] = useState("");
   const [editPickupCharge, setEditPickupCharge] = useState("");
@@ -142,15 +146,33 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
       return;
     }
     if (!fromBranch) {
-      setFormError("Could not determine company's home branch.");
+      setFormError("Could not determine company's registered branch.");
       return;
     }
-    if (!toBranchId) {
+
+    const actualFromBranchId = companySide === "FROM" ? fromBranch.branchId : selectedFromBranchId;
+    const actualToBranchId = companySide === "TO" ? fromBranch.branchId : selectedToBranchId;
+
+    if (!actualFromBranchId) {
+      setFormError("Please select From Branch.");
+      return;
+    }
+    if (!actualToBranchId) {
       setFormError("Please select To Branch.");
       return;
     }
-    if (fromBranch.branchId === toBranchId) {
+    if (actualFromBranchId === actualToBranchId) {
       setFormError("From Branch and To Branch cannot be the same.");
+      return;
+    }
+
+    // Branch Registration Validation
+    if (companySide === "FROM" && actualFromBranchId !== fromBranch.branchId) {
+      setFormError("Company is not registered under the selected From Branch.");
+      return;
+    }
+    if (companySide === "TO" && actualToBranchId !== fromBranch.branchId) {
+      setFormError("Company is not registered under the selected To Branch.");
       return;
     }
 
@@ -171,9 +193,9 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
         body: JSON.stringify({
           companyId: pkg.companyId,
           companyName: pkg.companyName || company?.companyName || "",
-          fromBranchId: fromBranch.branchId,
-          fromBranchName: fromBranch.branchName,
-          toBranchId,
+          companySide,
+          fromBranchId: actualFromBranchId,
+          toBranchId: actualToBranchId,
           packageId: pkg.packageId,
           packageName: pkg.packageName,
           transportRate: tRate,
@@ -186,7 +208,8 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
       if (!res.ok) throw new Error(json.message || "Failed to create company route rate.");
 
       showToast("Company route rate created successfully!");
-      setToBranchId("");
+      setSelectedFromBranchId("");
+      setSelectedToBranchId("");
       setTransportRateInput("");
       setPickupChargeInput("0");
       setDeliveryChargeInput("0");
@@ -219,7 +242,8 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyId: editRoute.companyId,
-          fromBranchId: editRoute.fromBranchId,
+          companySide: editCompanySide,
+          fromBranchId: editFromBranchId || editRoute.fromBranchId,
           toBranchId: editToBranchId || editRoute.toBranchId,
           packageId: editRoute.packageId,
           transportRate: tRate,
@@ -427,39 +451,114 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                 )}
 
                 <form onSubmit={handleCreateRoute} className="flex flex-col gap-4">
-                  {/* Read-only From Branch */}
+                  {/* Company Side Toggle */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      From Branch (Read-Only)
+                      Company Side (Required)
                     </label>
-                    <input
-                      type="text"
-                      disabled
-                      value={fromBranch ? `${fromBranch.branchName} (${fromBranch.branchCode})` : "N/A"}
-                      className="w-full text-xs rounded-xl px-4 py-2.5 outline-none border border-slate-800 bg-slate-950/70 text-slate-400 font-bold cursor-not-allowed"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      {(["FROM", "TO"] as const).map((side) => (
+                        <button
+                          key={side}
+                          type="button"
+                          onClick={() => {
+                            setCompanySide(side);
+                            setFormError("");
+                          }}
+                          className={`py-2.5 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                            companySide === side
+                              ? "bg-amber-600 border-amber-500 text-white shadow-lg shadow-amber-600/30"
+                              : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                          }`}
+                        >
+                          <span>{side}</span>
+                          <span className="text-[10px] opacity-80">
+                            {side === "FROM" ? "(Sender Side)" : "(Receiver Side)"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                      {companySide === "FROM"
+                        ? `Company '${company?.companyName || pkg?.companyName}' is on the FROM side. From Branch is set to registered branch '${fromBranch?.branchName || "N/A"}'.`
+                        : `Company '${company?.companyName || pkg?.companyName}' is on the TO side. To Branch is set to registered branch '${fromBranch?.branchName || "N/A"}'.`}
+                    </p>
                   </div>
 
-                  {/* Selectable To Branch */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      To Branch (Required)
-                    </label>
-                    <select
-                      value={toBranchId}
-                      onChange={(e) => setToBranchId(e.target.value)}
-                      className="w-full text-xs rounded-xl px-4 py-2.5 outline-none transition-colors border border-slate-800 focus:border-amber-500 bg-slate-950 text-slate-200 cursor-pointer"
-                    >
-                      <option value="">-- Select To Branch --</option>
-                      {branches
-                        .filter((b) => b.branchId !== fromBranch?.branchId)
-                        .map((b) => (
-                          <option key={b.branchId} value={b.branchId}>
-                            {b.branchName} ({b.branchCode})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
+                  {/* Branch Inputs based on Company Side */}
+                  {companySide === "FROM" ? (
+                    <>
+                      {/* Read-only From Branch */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          From Branch (Registered Branch - Read-Only)
+                        </label>
+                        <input
+                          type="text"
+                          disabled
+                          value={fromBranch ? `${fromBranch.branchName} (${fromBranch.branchCode})` : "N/A"}
+                          className="w-full text-xs rounded-xl px-4 py-2.5 outline-none border border-slate-800 bg-slate-950/70 text-amber-400 font-bold cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Selectable To Branch */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          To Branch (Required)
+                        </label>
+                        <select
+                          value={selectedToBranchId}
+                          onChange={(e) => setSelectedToBranchId(e.target.value)}
+                          className="w-full text-xs rounded-xl px-4 py-2.5 outline-none transition-colors border border-slate-800 focus:border-amber-500 bg-slate-950 text-slate-200 cursor-pointer"
+                        >
+                          <option value="">-- Select To Branch --</option>
+                          {branches
+                            .filter((b) => b.branchId !== fromBranch?.branchId)
+                            .map((b) => (
+                              <option key={b.branchId} value={b.branchId}>
+                                {b.branchName} ({b.branchCode})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Selectable From Branch */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          From Branch (Required)
+                        </label>
+                        <select
+                          value={selectedFromBranchId}
+                          onChange={(e) => setSelectedFromBranchId(e.target.value)}
+                          className="w-full text-xs rounded-xl px-4 py-2.5 outline-none transition-colors border border-slate-800 focus:border-amber-500 bg-slate-950 text-slate-200 cursor-pointer"
+                        >
+                          <option value="">-- Select From Branch --</option>
+                          {branches
+                            .filter((b) => b.branchId !== fromBranch?.branchId)
+                            .map((b) => (
+                              <option key={b.branchId} value={b.branchId}>
+                                {b.branchName} ({b.branchCode})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      {/* Read-only To Branch */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          To Branch (Registered Branch - Read-Only)
+                        </label>
+                        <input
+                          type="text"
+                          disabled
+                          value={fromBranch ? `${fromBranch.branchName} (${fromBranch.branchCode})` : "N/A"}
+                          className="w-full text-xs rounded-xl px-4 py-2.5 outline-none border border-slate-800 bg-slate-950/70 text-amber-400 font-bold cursor-not-allowed"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Transport Rate */}
                   <Input
@@ -636,6 +735,7 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                           <tr className="border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">
                             <th className="py-3 px-3">S.No</th>
                             <th className="py-3 px-3">Company</th>
+                            <th className="py-3 px-3">Side</th>
                             <th className="py-3 px-3">From Branch</th>
                             <th className="py-3 px-3">To Branch</th>
                             <th className="py-3 px-3">Transport</th>
@@ -652,6 +752,11 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                                 {startIdx + i + 1}
                               </td>
                               <td className="py-3 px-3 font-bold text-slate-300">{r.companyName}</td>
+                              <td className="py-3 px-3">
+                                <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase bg-violet-950/60 border border-violet-500/30 text-violet-300">
+                                  {r.companySide || "FROM"}
+                                </span>
+                              </td>
                               <td className="py-3 px-3 font-bold text-slate-200">{r.fromBranchName}</td>
                               <td className="py-3 px-3 font-bold text-slate-200">{r.toBranchName}</td>
                               <td className="py-3 px-3 font-mono font-bold text-emerald-400">₹{r.transportRate}</td>
@@ -674,6 +779,8 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                                     type="button"
                                     onClick={() => {
                                       setEditRoute(r);
+                                      setEditCompanySide(r.companySide || "FROM");
+                                      setEditFromBranchId(r.fromBranchId);
                                       setEditToBranchId(r.toBranchId);
                                       setEditTransportRate(String(r.transportRate));
                                       setEditPickupCharge(String(r.pickupCharge));
@@ -749,10 +856,47 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                 <strong className="text-slate-400">Package:</strong>{" "}
                 <span className="text-slate-100 font-bold">{editRoute?.packageName}</span>
               </p>
-              <p>
-                <strong className="text-slate-400">From Branch (Read-Only):</strong>{" "}
-                <span className="text-amber-400 font-bold">{editRoute?.fromBranchName}</span>
-              </p>
+            </div>
+
+            {/* Company Side in Edit Modal */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Company Side (Required)
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["FROM", "TO"] as const).map((side) => (
+                  <button
+                    key={side}
+                    type="button"
+                    onClick={() => setEditCompanySide(side)}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                      editCompanySide === side
+                        ? "bg-amber-600 border-amber-500 text-white"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {side}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* From Branch Dropdown */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                From Branch
+              </label>
+              <select
+                value={editFromBranchId}
+                onChange={(e) => setEditFromBranchId(e.target.value)}
+                className="w-full text-xs rounded-xl px-4 py-2.5 outline-none border border-slate-800 focus:border-amber-500 bg-slate-950 text-slate-200 cursor-pointer"
+              >
+                {branches.map((b) => (
+                  <option key={b.branchId} value={b.branchId}>
+                    {b.branchName} ({b.branchCode})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* To Branch Dropdown */}
@@ -766,7 +910,7 @@ export default function ManageCompanyRouteRatesPage({ params }: PageProps) {
                 className="w-full text-xs rounded-xl px-4 py-2.5 outline-none border border-slate-800 focus:border-amber-500 bg-slate-950 text-slate-200 cursor-pointer"
               >
                 {branches
-                  .filter((b) => b.branchId !== editRoute?.fromBranchId)
+                  .filter((b) => b.branchId !== editFromBranchId)
                   .map((b) => (
                     <option key={b.branchId} value={b.branchId}>
                       {b.branchName} ({b.branchCode})

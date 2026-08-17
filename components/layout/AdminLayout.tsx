@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleSidebar, setActiveRoute } from "@/store/slices/uiSlice";
 import Button from "../ui/Button";
+import { getCompanySettings, DEFAULT_COMPANY_SETTINGS, isAppAuthenticated, lockApp } from "@/utils/settings";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -13,11 +14,52 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const dispatch = useAppDispatch();
 
   const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed);
   const activeRoute = useAppSelector((state) => state.ui.activeRoute);
   const user = useAppSelector((state) => state.auth.user);
+
+  // Authentication check for current session
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (pathname !== "/login") {
+      if (!isAppAuthenticated()) {
+        router.replace("/login");
+      } else {
+        setIsAuthChecked(true);
+      }
+    } else {
+      setIsAuthChecked(true);
+    }
+  }, [pathname, router]);
+
+  const handleLockApp = () => {
+    lockApp();
+    router.replace("/login");
+  };
+
+
+  // Load company branding from localStorage (updates after Settings save)
+  const [sidebarCompanyName, setSidebarCompanyName] = useState<string>(DEFAULT_COMPANY_SETTINGS.companyName);
+  const [sidebarLogo, setSidebarLogo] = useState<string>("");
+
+  useEffect(() => {
+    const s = getCompanySettings();
+    setSidebarCompanyName(s.companyName || DEFAULT_COMPANY_SETTINGS.companyName);
+    setSidebarLogo(s.logo || "");
+
+    // Re-sync on storage events (e.g. settings changed in another tab)
+    const handleStorage = () => {
+      const fresh = getCompanySettings();
+      setSidebarCompanyName(fresh.companyName || DEFAULT_COMPANY_SETTINGS.companyName);
+      setSidebarLogo(fresh.logo || "");
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   useEffect(() => {
     dispatch(setActiveRoute(pathname));
@@ -88,6 +130,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </svg>
       ),
     },
+    {
+      label: "Settings",
+      path: "/settings",
+      icon: (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+    },
     
   ];
 
@@ -134,12 +186,21 @@ interface BreadcrumbItem {
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo Brand Header */}
           <div className="h-16 flex items-center px-4.5 border-b border-slate-900 gap-3 shrink-0 overflow-hidden">
-            <div className="h-7.5 w-7.5 rounded-lg bg-violet-600 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-lg shadow-violet-900/40">
-             ts
-            </div>
+            {/* Logo: show saved image or default violet icon */}
+            {sidebarLogo ? (
+              <img
+                src={sidebarLogo}
+                alt="Company Logo"
+                className="h-7.5 w-7.5 rounded-lg object-contain shrink-0 border border-slate-800"
+              />
+            ) : (
+              <div className="h-7.5 w-7.5 rounded-lg bg-violet-600 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-lg shadow-violet-900/40">
+               ts
+              </div>
+            )}
             {!sidebarCollapsed && (
               <span className="font-extrabold text-sm tracking-wide bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent truncate">
-                TMS transOS
+                {sidebarCompanyName}
               </span>
             )}
           </div>
@@ -167,10 +228,10 @@ interface BreadcrumbItem {
           </nav>
         </div>
 
-        {/* Sidebar Footer User block */}
-        <div className="p-3 border-t border-slate-900 shrink-0 overflow-hidden bg-slate-955/20">
-          <div className="flex items-center gap-3">
-            <div className="h-8.5 w-8.5 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0 select-none">
+        {/* Sidebar Footer User block & Lock App */}
+        <div className="p-3 border-t border-slate-900 shrink-0 overflow-hidden bg-slate-955/20 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 truncate">
+            <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0 select-none">
               SA
             </div>
             {!sidebarCollapsed && (
@@ -180,6 +241,16 @@ interface BreadcrumbItem {
               </div>
             )}
           </div>
+          <button
+            onClick={handleLockApp}
+            className="p-1.5 bg-slate-900 hover:bg-red-950/40 border border-slate-800 hover:border-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-all text-xs font-semibold shrink-0 cursor-pointer flex items-center gap-1"
+            title="Lock App"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            {!sidebarCollapsed && <span className="text-[10px]">Lock App</span>}
+          </button>
         </div>
       </aside>
 
@@ -222,18 +293,39 @@ interface BreadcrumbItem {
             </div>
           </div>
 
-          {/* Profile Metadata */}
-          <div className="flex items-center gap-4">
-            {/* Profile badge status */}
+          {/* Profile Metadata & Lock Button */}
+          <div className="flex items-center gap-3">
             <span className="px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
               Live Connected EXCEL SHEET 
             </span>
+            <button
+              onClick={handleLockApp}
+              className="px-2.5 py-1 bg-slate-900 hover:bg-red-950/40 border border-slate-800 hover:border-red-900/50 text-slate-300 hover:text-red-400 rounded-lg transition-all text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title="Lock Application"
+            >
+              <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>Lock App</span>
+            </button>
           </div>
         </header>
 
         {/* Content Wrapper */}
         <main className="flex-1 overflow-y-auto bg-[#0b0f19]">
-          {children}
+          {!isAuthChecked && pathname !== "/login" ? (
+            <div className="w-full h-full flex items-center justify-center bg-[#0b0f19]">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
+                <svg className="animate-spin h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Verifying session security...</span>
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

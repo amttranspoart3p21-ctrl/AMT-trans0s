@@ -44,16 +44,12 @@ export default function CompanyBillingWizard({
   const [selectedCompany, setSelectedCompany] = useState<SelectedCompanyInfo | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
-  // Invoice Fields State
+  // Invoice Fields State — start empty for every new/unsaved session
   const [invoiceDetails, setInvoiceDetails] = useState<InvoiceHeaderDetails>({
-    gstinNo: "33AABCA1234F1Z5",
-    hsnCodeNo: "996511",
-    invoiceNo: `TS/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, "0")}/001`,
-    invoiceDate: new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
+    gstinNo: "",
+    hsnCodeNo: "",
+    invoiceNo: "",
+    invoiceDate: "",
   });
 
   const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
@@ -63,12 +59,13 @@ export default function CompanyBillingWizard({
     gstin: "",
   });
 
+  // Bank Account Fields State — start empty for every new/unsaved session
   const [bankDetails, setBankDetails] = useState<BankAccountDetails>({
-    accountName: "TMS TRANSOS",
-    accountNumber: "123456789012",
-    bankName: "HDFC Bank",
-    branch: "Ambur",
-    ifscCode: "HDFC0001234",
+    accountName: "",
+    accountNumber: "",
+    bankName: "",
+    branch: "",
+    ifscCode: "",
   });
 
   // Saved Profiles State

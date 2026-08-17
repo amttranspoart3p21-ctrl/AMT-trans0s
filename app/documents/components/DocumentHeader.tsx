@@ -36,10 +36,18 @@ export default function DocumentHeader({
           </div>
         </div>
 
-        {/* Logo Placeholder Box */}
-        <div className="doc-logo-box h-16 w-16 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 text-slate-400 font-bold text-[10px] tracking-wider select-none bg-slate-50">
-          LOGO
-        </div>
+        {/* Logo: show saved image or placeholder */}
+        {branding.logoUrl ? (
+          <img
+            src={branding.logoUrl}
+            alt="Company Logo"
+            className="doc-logo-box h-16 w-16 object-contain rounded-lg shrink-0 border border-slate-200"
+          />
+        ) : (
+          <div className="doc-logo-box h-16 w-16 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 text-slate-400 font-bold text-[10px] tracking-wider select-none bg-slate-50">
+            LOGO
+          </div>
+        )}
       </div>
 
       {/* 2. Document Title Panel */}
