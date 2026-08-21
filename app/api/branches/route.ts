@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") ?? undefined;
 
     const status =
-      (searchParams.get("status") as "Active" | "Shutdown" | null) ??
+      (searchParams.get("status") as "Active" | "Inactive" | null) ??
       undefined;
 
     const page = Number(searchParams.get("page"));

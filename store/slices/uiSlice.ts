@@ -7,7 +7,7 @@ interface UiState {
 
 const initialState: UiState = {
   sidebarCollapsed: false,
-  activeRoute: "/",
+  activeRoute: "/dashboard",
 };
 
 export const uiSlice = createSlice({

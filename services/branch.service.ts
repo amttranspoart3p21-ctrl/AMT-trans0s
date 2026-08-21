@@ -235,8 +235,7 @@ export async function deleteBranch(
 }
 
 export async function inactiveBranch(
-  branchId: string,
-  targetStatus: "Inactive" | "Shutdown" = "Inactive"
+  branchId: string
 ): Promise<{ updatedBranch: Branch; updatedCounts: BranchCascadeCounts }> {
   const branches = await readBranches();
   const branchIndex = branches.findIndex(
@@ -250,7 +249,7 @@ export async function inactiveBranch(
   const now = new Date().toISOString();
   branches[branchIndex] = {
     ...branches[branchIndex],
-    status: targetStatus,
+    status: "Inactive",
     updatedAt: now,
   };
   const updatedBranch = branches[branchIndex];
@@ -446,7 +445,7 @@ export async function getBranchesWithPagination(
   page: number,
   limit: number,
   search?: string,
-  status?: "Active" | "Shutdown"
+  status?: "Active" | "Inactive"
 )
 {
   
@@ -524,7 +523,7 @@ if (status) {
 }
 
 export async function filterBranchesByStatus(
-  status: "Active" | "Shutdown"
+  status: "Active" | "Inactive"
 ) {
   const branches = await getBranches();
 
@@ -540,13 +539,13 @@ export async function getBranchStatistics() {
     (branch) => branch.status === "Active"
   ).length;
 
-  const shutdownBranches = branches.filter(
-    (branch) => branch.status === "Shutdown"
+  const inactiveBranches = branches.filter(
+    (branch) => branch.status === "Inactive"
   ).length;
 
   return {
     totalBranches,
     activeBranches,
-    shutdownBranches,
+    inactiveBranches,
   };
 }

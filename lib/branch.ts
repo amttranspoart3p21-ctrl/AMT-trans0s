@@ -106,7 +106,7 @@ export async function readBranches(): Promise<Branch[]> {
       phoneNumber4: row.getCell(8).value?.toString() ?? "",
       phoneNumber5: row.getCell(9).value?.toString() ?? "",
 
-      status: (row.getCell(10).value?.toString() as Branch["status"]) ?? "Active",
+      status: (row.getCell(10).value?.toString() === "Shutdown" ? "Inactive" : (row.getCell(10).value?.toString() as Branch["status"])) ?? "Active",
 
       createdAt: row.getCell(11).value?.toString() ?? "",
       updatedAt: row.getCell(12).value?.toString() ?? "",

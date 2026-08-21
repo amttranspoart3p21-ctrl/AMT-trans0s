@@ -20,7 +20,7 @@ export interface Branch {
   phoneNumber4?: string;
   phoneNumber5?: string;
 
-  status: "Active" | "Inactive" | "Shutdown";
+  status: "Active" | "Inactive";
 
   createdAt: string;
   updatedAt: string;

@@ -58,8 +58,8 @@ export async function PUT(
 
     const body = await request.json();
 
-    if (body.status === "Inactive" || body.status === "Shutdown") {
-      const { updatedBranch, updatedCounts } = await inactiveBranch(branchId, body.status);
+    if (body.status === "Inactive") {
+      const { updatedBranch, updatedCounts } = await inactiveBranch(branchId);
 
       return NextResponse.json({
         success: true,

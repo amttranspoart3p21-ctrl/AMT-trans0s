@@ -47,7 +47,7 @@ def validate_shipment(row_number: int, cols: list) -> dict:
     customer_invoice = cols[1].strip()
     to_company = cols[2].strip()
     package_type = cols[3].strip()
-    quantity = normalize_quantity_text(cols[4].strip())
+    quantity = cols[4].strip()
 
     errors = []
 

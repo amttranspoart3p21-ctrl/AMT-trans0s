@@ -20,7 +20,7 @@ export default function LoginPage() {
   useEffect(() => {
     // If already authenticated, redirect straight to dashboard
     if (isAppAuthenticated()) {
-      router.replace("/");
+      router.replace("/dashboard");
       return;
     }
     // Load company settings for branding
@@ -34,7 +34,7 @@ export default function LoginPage() {
     const storedPassword = getStoredPassword();
     if (password === storedPassword) {
       setAppAuthenticated(true);
-      router.replace("/");
+      router.replace("/dashboard");
     } else {
       setErrorMsg("Incorrect password.");
     }

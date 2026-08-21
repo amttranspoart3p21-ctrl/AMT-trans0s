@@ -16,7 +16,7 @@ import type { Branch } from "@/types/branch";
 interface BranchStats {
   totalBranches: number;
   activeBranches: number;
-  shutdownBranches: number;
+  inactiveBranches: number;
 }
 
 interface PaginationMeta {
@@ -41,7 +41,7 @@ interface BranchFormData {
   phoneNumber3: string;
   phoneNumber4: string;
   phoneNumber5: string;
-  status: "Active" | "Inactive" | "Shutdown";
+  status: "Active" | "Inactive";
 }
 
 const emptyForm: BranchFormData = {
@@ -60,7 +60,7 @@ interface BranchFormProps {
   formData: BranchFormData;
   formErrors: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>, field: keyof BranchFormData) => void;
-  onStatusChange: (status: "Active" | "Inactive" | "Shutdown") => void;
+  onStatusChange: (status: "Active" | "Inactive") => void;
 }
 
 
@@ -136,7 +136,7 @@ function BranchForm({
       <div className="flex flex-col gap-1.5">
         <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
         <div className="flex gap-3">
-          {(["Active", "Inactive", "Shutdown"] as const).map((s) => (
+          {(["Active", "Inactive"] as const).map((s) => (
             <button
               key={s}
               type="button"
@@ -182,7 +182,7 @@ export default function BranchesPage() {
   });
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Shutdown">("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchesError, setBranchesError] = useState("");
 
@@ -640,8 +640,8 @@ export default function BranchesPage() {
                     }
                   />
                   <StatCard
-                    label="Shutdown Branches"
-                    value={stats.shutdownBranches}
+                    label="Inactive Branches"
+                    value={stats.inactiveBranches}
                     color="bg-rose-600/20 text-rose-400"
                     bgGlow="bg-rose-500"
                     icon={
@@ -674,7 +674,7 @@ export default function BranchesPage() {
                   </div>
                   <div className="flex justify-between mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     <span>{stats.activeBranches} Active</span>
-                    <span>{stats.shutdownBranches} Shutdown</span>
+                    <span>{stats.inactiveBranches} Inactive</span>
                   </div>
                 </div>
               </>
@@ -709,7 +709,7 @@ export default function BranchesPage() {
                 >
                   <option value="All">All Status</option>
                   <option value="Active">Active Only</option>
-                  <option value="Shutdown">Shutdown Only</option>
+                  <option value="Inactive">Inactive Only</option>
                 </select>
               </div>
               <Button
@@ -844,7 +844,7 @@ export default function BranchesPage() {
                           onClick={(e) => { e.stopPropagation(); handleToggleStatus(branch); }}
                           disabled={togglingId === branch.branchId}
                           className="relative inline-flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={`Switch to ${branch.status === "Active" ? "Shutdown" : "Active"}`}
+                          title={`Switch to ${branch.status === "Active" ? "Inactive" : "Active"}`}
                         >
                           <div className={`w-9 h-5 rounded-full transition-colors duration-300 ${branch.status === "Active" ? "bg-emerald-600" : "bg-slate-700"}`}>
                             <div className={`w-3.5 h-3.5 mt-[3px] rounded-full bg-white shadow transition-transform duration-300 ${branch.status === "Active" ? "translate-x-[19px]" : "translate-x-[3px]"}`} />

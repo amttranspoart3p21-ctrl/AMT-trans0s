@@ -67,8 +67,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const navItems = [
     {
-      label: "Dashboard / OCR",
-      path: "/",
+      label: "Dashboard",
+      path: "/dashboard",
+      icon: (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+        </svg>
+      ),
+    },
+    {
+      label: "OCR",
+      path: "/ocr",
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -80,7 +89,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       path: "/shipments",
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 022 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       ),
     },
@@ -153,7 +162,7 @@ interface BreadcrumbItem {
     const segments = pathname.split("/").filter(Boolean);
     if (segments.length === 0) return [{ label: "Home" }];
 
-    const crumbs: BreadcrumbItem[] = [{ label: "Home", path: "/" }];
+    const crumbs: BreadcrumbItem[] = [{ label: "Home", path: "/dashboard" }];
     segments.forEach((seg, idx) => {
       const isLast = idx === segments.length - 1;
       const formattedSeg = seg
@@ -170,7 +179,8 @@ interface BreadcrumbItem {
   };
 
   const getPageTitle = () => {
-    if (pathname === "/") return "Dashboard & OCR Review";
+    if (pathname === "/dashboard") return "Master Dashboard";
+    if (pathname === "/ocr") return "Dashboard & OCR Review";
     const item = navItems.find((n) => n.path === pathname);
     return item ? item.label : "Management Console";
   };
@@ -228,30 +238,7 @@ interface BreadcrumbItem {
           </nav>
         </div>
 
-        {/* Sidebar Footer User block & Lock App */}
-        <div className="p-3 border-t border-slate-900 shrink-0 overflow-hidden bg-slate-955/20 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 truncate">
-            <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0 select-none">
-              SA
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex flex-col truncate">
-                <span className="text-[11px] font-bold text-slate-300 truncate">{user?.name}</span>
-                <span className="text-[9px] font-semibold text-slate-500 truncate">{user?.role}</span>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={handleLockApp}
-            className="p-1.5 bg-slate-900 hover:bg-red-950/40 border border-slate-800 hover:border-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-all text-xs font-semibold shrink-0 cursor-pointer flex items-center gap-1"
-            title="Lock App"
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            {!sidebarCollapsed && <span className="text-[10px]">Lock App</span>}
-          </button>
-        </div>
+
       </aside>
 
       {/* Main View Area */}
