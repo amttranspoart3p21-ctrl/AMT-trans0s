@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -548,7 +548,7 @@ export default function BranchesPage() {
      ============================================================ */
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="flex-1 flex flex-col p-6 w-full mx-auto relative select-none">
         {/* Page Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-800 mb-6 gap-4">
@@ -1043,6 +1043,6 @@ export default function BranchesPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import type { ShipmentRecord, ShipmentFilters as IFilters } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import type { Company } from "@/types/company";
@@ -279,7 +279,7 @@ export default function DocumentsPage() {
   const packageOptions = buildPackageOptions();
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="doc-page-container flex-1 flex flex-col p-6  w-full mx-auto relative select-none">
         {/* Header Panel */}
         <header className="no-print flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
@@ -415,6 +415,6 @@ export default function DocumentsPage() {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }

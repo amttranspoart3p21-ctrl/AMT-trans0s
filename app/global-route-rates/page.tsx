@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import Pagination from "@/app/shipments/components/Pagination";
 import type { Package } from "@/types/packageType";
 import type { Company } from "@/types/company";
@@ -328,7 +328,7 @@ export default function RouteRatesPage() {
      ============================================================ */
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="flex-1 flex flex-col p-6 w-full mx-auto relative">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -536,6 +536,6 @@ export default function RouteRatesPage() {
           </>
         )}
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }

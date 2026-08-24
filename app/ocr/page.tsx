@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import type { Branch } from "@/types/branch";
 
 interface BoundingBox {
@@ -592,7 +592,7 @@ export default function OCRPage() {
 
   if (uploadFile !== null || isManualWorkspace) {
     return (
-      <AdminLayout>
+      <Layout>
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -990,12 +990,12 @@ export default function OCRPage() {
           </div>
         )}
         </div>
-      </AdminLayout>
+      </Layout>
     );
   }
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="flex-1 flex flex-col p-6 max-w-7xl w-full mx-auto select-none">
       <header className="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-slate-800 gap-4">
         <div>
@@ -1249,6 +1249,6 @@ export default function OCRPage() {
         )}
       </main>
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }

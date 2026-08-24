@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import {
   getCompanySettings,
   saveCompanySettings,
@@ -93,7 +93,7 @@ export default function SettingsPage() {
     }
 
     saveCompanySettings(company);
-    // Notify same-tab listeners (AdminLayout sidebar) about the settings change.
+    // Notify same-tab listeners (Layout sidebar) about the settings change.
     // The native "storage" event only fires in OTHER tabs, so we dispatch it manually here.
     window.dispatchEvent(new Event("storage"));
     setCompanySuccess("Company Information saved successfully.");
@@ -106,7 +106,7 @@ export default function SettingsPage() {
     "text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block";
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="flex-1 flex flex-col p-6 max-w-3xl w-full mx-auto select-none">
         {/* Page Header */}
         <header className="pb-6 border-b border-slate-800 mb-8">
@@ -422,6 +422,6 @@ export default function SettingsPage() {
           </section>
         )}
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }

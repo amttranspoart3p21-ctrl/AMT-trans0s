@@ -7,6 +7,36 @@
   }
 }
 
+/* Modern, sleek custom scrollbars matching UI/UX design language */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 150, 170, 0.22);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 150, 170, 0.45);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(140, 150, 170, 0.22) transparent;
+}
+
 /* Screen mode defaults */
 .print-table-container {
   display: none;

@@ -1,4 +1,3 @@
-import React from "react";
 
 interface LoaderProps {
   variant?: "spinner" | "skeleton" | "overlay";

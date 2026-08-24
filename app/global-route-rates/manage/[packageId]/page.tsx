@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
-import AdminLayout from "@/components/layout/AdminLayout";
+import Layout from "@/components/layout/Layout";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -258,7 +258,7 @@ export default function ManageGlobalRouteRatesPage({ params }: PageProps) {
      ============================================================ */
 
   return (
-    <AdminLayout>
+    <Layout>
       <div className="flex-1 flex flex-col p-6 w-full mx-auto relative">
         {/* Toast Notification */}
         {toast && (
@@ -743,6 +743,6 @@ export default function ManageGlobalRouteRatesPage({ params }: PageProps) {
           </div>
         </Modal>
       </div>
-    </AdminLayout>
+    </Layout>
   );
 }
