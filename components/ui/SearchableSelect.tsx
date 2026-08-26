@@ -262,14 +262,14 @@ export default function SearchableSelect({
     ? "border-rose-500/70 focus:border-rose-500 bg-rose-955/10 text-rose-200"
     : warning || hasBadge
     ? "border-amber-500/70 focus:border-amber-500 bg-amber-955/10 text-amber-250"
-    : "border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 bg-slate-950 text-slate-200";
+    : "border-slate-200 dark:border-slate-800 focus:border-[#0077c5] focus:ring-1 focus:ring-[#0077c5] bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200";
 
   return (
     <div className="flex flex-col gap-1.5 w-full select-none" ref={containerRef}>
       {label && (
         <label
           htmlFor={selectId}
-          className="text-[10px] font-bold uppercase tracking-wider text-slate-450"
+          className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
         >
           {label}
         </label>
@@ -288,7 +288,7 @@ export default function SearchableSelect({
             disabled ? "bg-slate-900/60 border-slate-850 text-slate-550 cursor-not-allowed opacity-60 pointer-events-none" : borderClass
           } ${className}`}
         >
-          <span className={`flex items-center gap-2 flex-1 min-w-0 ${selectedOption ? "text-slate-200" : "text-slate-500"}`}>
+          <span className={`flex items-center gap-2 flex-1 min-w-0 ${selectedOption ? "text-slate-800 dark:text-slate-200 font-medium" : "text-slate-400 dark:text-slate-500"}`}>
             <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
             {selectedOption?.badge && (
               <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border tracking-wider select-none shrink-0 ${

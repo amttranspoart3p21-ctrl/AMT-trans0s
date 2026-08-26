@@ -27,7 +27,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (!isAuthChecked && pathname !== "/login") {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-[#0b0f19]">
+      <div className="w-full h-full flex items-center justify-center bg-[#F0F7FF] dark:bg-[#0b0f19]">
         <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold">
           <svg className="animate-spin h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

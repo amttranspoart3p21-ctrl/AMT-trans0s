@@ -8,9 +8,9 @@ export default function ShipmentsPage() {
   return (
     <Layout>
       <ShipmentWorkspace
-        title="Global Shipment Register"
         context={{ type: "global" }}
         actions={["spreadsheet", "export"]}
+        hideHeader={true}
       />
     </Layout>
   );

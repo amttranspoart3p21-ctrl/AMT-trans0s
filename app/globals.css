@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
+    background-color: #F0F7FF;
+    color: #1e293b;
+  }
+
+  html.dark body,
+  body.dark {
     background-color: #0b0f19;
     color: #f3f4f6;
   }
@@ -100,132 +108,88 @@
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
-    box-shadow: none !important;
     border: none !important;
-    max-width: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: block !important;
     position: static !important;
-    float: none !important;
   }
 
-  /* Stylize printable document container to cover full page width cleanly */
-  #printable-document {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 0 !important;
-    padding: 2mm 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: white !important;
-    color: #000000 !important;
-  }
-
+  /* Force print table container visible and styled for high-density physical paper rendering */
   .print-table-container {
     display: block !important;
     width: 100% !important;
-    flex: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    margin: 0 !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
     padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    box-sizing: border-box !important;
+    page-break-after: auto;
+    font-family: Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  .mt-auto {
-    margin-top: 15px !important;
-  }
-
-  /* Format tables cleanly for print grids */
-  .w-full.overflow-hidden.border.border-slate-300.rounded-xl {
-    overflow: visible !important;
-    border: none !important;
-    border-radius: 0 !important;
-    margin-bottom: 8px !important;
+  /* Table structural sizing and typography */
+  .print-table-container table {
     width: 100% !important;
-  }
-
-  table {
     border-collapse: collapse !important;
-    width: 100% !important;
+    font-size: 7.5pt !important;
+    line-height: 1.15 !important;
     table-layout: fixed !important;
-    margin: 0 !important;
+    page-break-inside: auto !important;
   }
 
-  thead {
+  /* Header row repeat on multi-page printouts */
+  .print-table-container thead {
     display: table-header-group !important;
   }
 
-  tr {
-    break-inside: avoid !important;
+  /* Ensure rows don't split awkwardly across pages */
+  .print-table-container tr {
     page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
-  th {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
-    border: 1px solid #64748b !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    font-size: 8px !important;
-    font-weight: 800 !important;
-    line-height: 1.25 !important;
-    padding: 3px 2px !important;
+  /* Crisp, dark high-contrast borders for physical print legibility */
+  .print-table-container th,
+  .print-table-container td {
+    border: 1px solid #1f2937 !important;
+    padding: 2.5px 3.5px !important;
+    text-align: left !important;
+    vertical-align: middle !important;
     word-break: break-word !important;
-    overflow: hidden !important;
-    text-align: inherit;
+    overflow-wrap: break-word !important;
+    color: black !important;
   }
 
-  td {
-    border: 1px solid #cbd5e1 !important;
-    color: #0f172a !important;
-    font-size: 7.5px !important;
-    line-height: 1.25 !important;
-    padding: 3px 2px !important;
-    word-break: break-word !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+  .print-table-container th {
+    background-color: #e5e7eb !important;
+    color: #111827 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 6.5pt !important;
+    letter-spacing: 0.025em !important;
   }
 
-  /* Optimal A4 Landscape percentage allocation summing to 100% for 22 columns */
-  .col-sNo { width: 2.5% !important; }
-  .col-date { width: 5.5% !important; }
-  .col-vehicleNumber { width: 6.0% !important; }
-  .col-fromAmtBranch { width: 3.0% !important; }
-  .col-fromCompany { width: 6.5% !important; }
-  .col-toAmtBranch { width: 3.0% !important; }
-  .col-toCompany { width: 6.5% !important; }
-  .col-packageType { width: 4.5% !important; }
-  .col-quantity { width: 3.0% !important; }
-  .col-ourInvoiceNumber { width: 4.0% !important; }
-  .col-customerInvoiceNumber { width: 4.0% !important; }
-  .col-paymentCompany { width: 6.5% !important; }
-  .col-paymentReceivingBranch { width: 5.0% !important; }
-  .col-pickupService { width: 4.0% !important; }
-  .col-deliveryService { width: 4.0% !important; }
-  .col-deliveryStatus { width: 5.0% !important; }
-  .col-transportRate { width: 4.5% !important; }
-  .col-pickupCharge { width: 3.5% !important; }
-  .col-deliveryCharge { width: 3.5% !important; }
-  .col-pricePerPiece { width: 4.0% !important; }
-  .col-totalAmount { width: 5.5% !important; }
-  .col-paymentStatus { width: 5.5% !important; }
-
-  /* Tax Invoice specific print overrides */
-  .tax-invoice-document table th {
-    font-size: 9.5px !important;
-    font-weight: 800 !important;
-    padding: 4px 3px !important;
+  /* Distinct visual highlight for the summary/total row */
+  .print-table-container tr.print-total-row th,
+  .print-table-container tr.print-total-row td {
+    background-color: #f3f4f6 !important;
+    font-weight: 700 !important;
+    border-top: 2px solid #111827 !important;
+    border-bottom: 2px solid #111827 !important;
   }
 
-  .tax-invoice-document table td {
-    font-size: 9px !important;
-    padding: 4px 3px !important;
+  /* Numeric alignment helper */
+  .print-table-container .text-right {
+    text-align: right !important;
+  }
+
+  .print-table-container .text-center {
+    text-align: center !important;
   }
 }
