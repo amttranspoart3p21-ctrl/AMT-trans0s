@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import Layout from "@/components/layout/Layout";
 import type { ShipmentRecord, ShipmentFilters as IFilters } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
@@ -220,73 +219,33 @@ export default function DocumentsPage() {
 
   const packageOptions = buildPackageOptions(packages, companies, branches, shipmentPackages);
 
+  // Handle document tab change and automatically reset all filters
+  const handleDocTypeChange = (newType: string) => {
+    if (newType !== docType) {
+      setDocType(newType);
+      setFilters({}); // Automatically reset filters on tab switch
+    }
+  };
+
   return (
     <Layout>
-      <div className="doc-page-container flex-1 flex flex-col p-6  w-full mx-auto relative select-none">
-        {/* Header Panel */}
-        <header className="no-print flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-              Documents Center
-            </h1>
-            <p className="text-slate-400 mt-1 font-medium">
-              Generate and preview official statements, invoices, and logistics summaries
-            </p>
-          </div>
-          <div>
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-355 hover:text-slate-200 border border-slate-700/60 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1.5"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Dashboard
-            </Link>
-          </div>
-        </header>
-
-        {/* Selector & Action Toolbar Layout Grid */}
-        <div className="no-print grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* Document Type Selector Card */}
-          <div className="bg-slate-905 border border-slate-800 p-5 rounded-2xl flex flex-col gap-4 shadow-lg backdrop-blur-md">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Select Document Template
-            </label>
-            <div className="relative">
-              <select
-                value={docType}
-                onChange={(e) => setDocType(e.target.value)}
-                className="w-full bg-slate-955 border border-slate-800 text-xs text-slate-200 rounded-xl px-4 py-2.5 outline-none cursor-pointer focus:border-violet-500 focus:ring-1 focus:ring-violet-500 appearance-none shadow-md"
-              >
-                <option value="shipment">Shipment Statement</option>
-                <option value="billing">Company Billing Statement</option>
-              </select>
-              <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </span>
-            </div>
-          </div>
-
-          {/* Global Documents Action Toolbar */}
-          <div className="lg:col-span-3">
-            {docType !== "billing" && (
-              <DocumentToolbar
-                onFiltersToggle={() => setShowFilters(!showFilters)}
-                showFilters={showFilters}
-                activeFiltersCount={activeFiltersCount}
-                onPrint={handlePrint}
-                onExportExcel={handleExportExcel}
-              />
-            )}
-          </div>
+      <div className="doc-page-container flex-1 flex flex-col p-2 sm:p-3 md:p-4 w-full mx-auto relative select-none">
+        {/* Global Documents Action Toolbar */}
+        <div className="no-print mb-2">
+          <DocumentToolbar
+            docType={docType}
+            onDocTypeChange={handleDocTypeChange}
+            onFiltersToggle={() => setShowFilters(!showFilters)}
+            showFilters={showFilters}
+            activeFiltersCount={activeFiltersCount}
+            onPrint={handlePrint}
+            onExportExcel={handleExportExcel}
+          />
         </div>
 
         {/* Advanced Filter Wrapper (for Shipment Statement) */}
         {docType !== "billing" && (
-          <div className="no-print mb-6">
+          <div className="no-print mb-2">
             <DocumentFilters
               filters={filters}
               onChange={setFilters}
@@ -295,12 +254,13 @@ export default function DocumentsPage() {
               visible={showFilters}
               availableYears={availableYears}
               packageOptions={packageOptions}
+              onClose={() => setShowFilters(false)}
             />
           </div>
         )}
 
         {/* Main Document Preview Layout Panel */}
-        <div className="doc-preview-wrapper flex-1 flex flex-col items-center">
+        <div className="doc-preview-wrapper flex-1 flex flex-col items-center w-full">
           {docType === "billing" ? (
             <CompanyBillingWizard
               shipments={shipments}
@@ -311,10 +271,12 @@ export default function DocumentsPage() {
               filters={filters}
               onFiltersChange={setFilters}
               onResetFilters={handleResetFilters}
+              showFilters={showFilters}
+              onCloseFilters={() => setShowFilters(false)}
             />
           ) : loading ? (
-            <div className="w-full bg-slate-900/40 border border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
-              <svg className="animate-spin h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24">
+            <div className="w-full bg-white dark:bg-slate-900/40 border border-slate-200/90 dark:border-slate-850 p-20 rounded-2xl flex flex-col items-center justify-center gap-3">
+              <svg className="animate-spin h-8 w-8 text-sky-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
@@ -353,6 +315,7 @@ export default function DocumentsPage() {
               dateRange={dateRangeStr}
               generatedDate={todayStr}
               branches={branches}
+              filters={filters}
             />
           )}
         </div>

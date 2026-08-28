@@ -28,7 +28,7 @@ export interface CompanySettings {
 /** Fallback defaults that match the previously hardcoded document values */
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyName: "TMS TRANSOS",
-  address: "Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802",
+  address: ", Transport Nagar, Ambur, Tamil Nadu - 635802",
   phoneNumber1: "+91 98765 43210",
   phoneNumber2: "+91 87654 32109",
   email: "billing@tms-transport.com",

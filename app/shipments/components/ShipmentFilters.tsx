@@ -66,7 +66,7 @@ export default function ShipmentFilters({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 ml-1 text-slate-400 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-slate-200/80 dark:border-zinc-700/80 shadow-2xs"
+              className="p-1.5 ml-1 text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-lg transition-colors cursor-pointer flex items-center justify-center border border-slate-200/90 dark:border-zinc-700 shadow-2xs"
               title="Close / Collapse Filters"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -77,129 +77,122 @@ export default function ShipmentFilters({
         </div>
       </div>
 
-      {/* Section 1: Timeframe vs Location & Route */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-5">
-        {/* Left Column: Timeframe */}
-        <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80">
-            Timeframe
-          </h4>
-          <div className="grid grid-cols-3 gap-3">
-            {/* DATE */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE</label>
-              <input
-                type="date"
-                value={filters.date || ""}
-                onChange={(e) => handleFieldChange("date", e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
-              />
-            </div>
-
-            {/* MONTH */}
-            <SearchableSelect
-              label="MONTH"
-              value={filters.month || ""}
-              onChange={(val) => handleFieldChange("month", val)}
-              placeholder="Select"
-              hideSearch
-              options={[
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
-              ].map((m) => ({ value: m, label: m }))}
-            />
-
-            {/* YEAR */}
-            <SearchableSelect
-              label="YEAR"
-              value={filters.year || ""}
-              onChange={(val) => handleFieldChange("year", val)}
-              placeholder="Select"
-              options={availableYears.map((y) => ({ value: String(y), label: String(y) }))}
+      {/* Section 1: Timeframe */}
+      <div className="flex flex-col gap-3 mb-5">
+        <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80">
+          Timeframe & Date Filters
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* DATE */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE</label>
+            <input
+              type="date"
+              value={filters.date || ""}
+              onChange={(e) => handleFieldChange("date", e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {/* DATE FROM */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE FROM</label>
-              <input
-                type="date"
-                value={filters.dateFrom || ""}
-                onChange={(e) => handleFieldChange("dateFrom", e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
-              />
-            </div>
-            {/* DATE TO */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE TO</label>
-              <input
-                type="date"
-                value={filters.dateTo || ""}
-                onChange={(e) => handleFieldChange("dateTo", e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
-              />
-            </div>
+          {/* DATE FROM */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE FROM</label>
+            <input
+              type="date"
+              value={filters.dateFrom || ""}
+              onChange={(e) => handleFieldChange("dateFrom", e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
+            />
           </div>
+
+          {/* DATE TO */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">DATE TO</label>
+            <input
+              type="date"
+              value={filters.dateTo || ""}
+              onChange={(e) => handleFieldChange("dateTo", e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs dark:[color-scheme:dark]"
+            />
+          </div>
+
+          {/* MONTH */}
+          <SearchableSelect
+            label="MONTH"
+            value={filters.month || ""}
+            onChange={(val) => handleFieldChange("month", val)}
+            placeholder="Select"
+            hideSearch
+            options={[
+              "January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December"
+            ].map((m) => ({ value: m, label: m }))}
+          />
+
+          {/* YEAR */}
+          <SearchableSelect
+            label="YEAR"
+            value={filters.year || ""}
+            onChange={(val) => handleFieldChange("year", val)}
+            placeholder="Select"
+            options={availableYears.map((y) => ({ value: String(y), label: String(y) }))}
+          />
         </div>
+      </div>
 
-        {/* Right Column: Location & Route */}
-        <div className="flex flex-col gap-3">
-          <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80">
-            Location & Route
-          </h4>
-          <div className="grid grid-cols-2 gap-3">
-            {/* FROM BRANCH */}
-            <SearchableSelect
-              label="FROM BRANCH"
-              value={filters.fromBranch || ""}
-              onChange={(val) => handleFieldChange("fromBranch", val)}
-              placeholder="Select origin branch..."
-              options={branches.map((b) => ({
-                value: b.branchName,
-                label: b.branchName,
-                disabled: b.branchName === filters.toBranch,
-                disabledReason: "(Selected in To)",
-              }))}
-            />
-            {/* TO BRANCH */}
-            <SearchableSelect
-              label="TO BRANCH"
-              value={filters.toBranch || ""}
-              onChange={(val) => handleFieldChange("toBranch", val)}
-              placeholder="Select destination branch..."
-              options={branches.map((b) => ({
-                value: b.branchName,
-                label: b.branchName,
-                disabled: b.branchName === filters.fromBranch,
-                disabledReason: "(Selected in From)",
-              }))}
+      {/* Section 2: Location & Route */}
+      <div className="flex flex-col gap-3 mb-5">
+        <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80">
+          Location & Route
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* FROM BRANCH */}
+          <SearchableSelect
+            label="FROM BRANCH"
+            value={filters.fromBranch || ""}
+            onChange={(val) => handleFieldChange("fromBranch", val)}
+            placeholder="Select origin branch..."
+            options={branches.map((b) => ({
+              value: b.branchName,
+              label: b.branchName,
+              disabled: b.branchName === filters.toBranch,
+              disabledReason: "(Selected in To)",
+            }))}
+          />
+          {/* TO BRANCH */}
+          <SearchableSelect
+            label="TO BRANCH"
+            value={filters.toBranch || ""}
+            onChange={(val) => handleFieldChange("toBranch", val)}
+            placeholder="Select destination branch..."
+            options={branches.map((b) => ({
+              value: b.branchName,
+              label: b.branchName,
+              disabled: b.branchName === filters.fromBranch,
+              disabledReason: "(Selected in From)",
+            }))}
+          />
+          {/* FROM COMPANY */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">FROM COMPANY</label>
+            <input
+              type="text"
+              placeholder="Origin company"
+              value={filters.fromCompany || ""}
+              onChange={(e) => handleFieldChange("fromCompany", e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs"
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {/* FROM COMPANY */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">FROM COMPANY</label>
-              <input
-                type="text"
-                placeholder="Origin company"
-                value={filters.fromCompany || ""}
-                onChange={(e) => handleFieldChange("fromCompany", e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs"
-              />
-            </div>
-            {/* TO COMPANY */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">TO COMPANY</label>
-              <input
-                type="text"
-                placeholder="Destination company"
-                value={filters.toCompany || ""}
-                onChange={(e) => handleFieldChange("toCompany", e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs"
-              />
-            </div>
+          {/* TO COMPANY */}
+          <div className="flex flex-col">
+            <label className="text-[10px] font-extrabold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">TO COMPANY</label>
+            <input
+              type="text"
+              placeholder="Destination company"
+              value={filters.toCompany || ""}
+              onChange={(e) => handleFieldChange("toCompany", e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-300/80 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-2xs"
+            />
           </div>
         </div>
       </div>

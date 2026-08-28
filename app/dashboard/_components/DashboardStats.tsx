@@ -23,7 +23,7 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
   const { branches, companies, packages } = stats;
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10 pb-8">
 
       {/* ══════════════════════════════════════
           1. BRANCHES — 3-col uniform grid

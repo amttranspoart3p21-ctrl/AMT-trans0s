@@ -272,7 +272,7 @@ export default function SettingsPage() {
                   rows={2}
                   value={company.address}
                   onChange={(e) => setCompany((p) => ({ ...p, address: e.target.value }))}
-                  placeholder="e.g. Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802"
+                  placeholder="e.g, Transport Nagar, Ambur, Tamil Nadu - 635802"
                   className={`${inputClass} resize-none`}
                 />
               </div>

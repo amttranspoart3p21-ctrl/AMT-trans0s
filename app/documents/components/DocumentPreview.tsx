@@ -9,7 +9,7 @@ import Pagination from "@/app/shipments/components/Pagination";
 import type { DocumentConfig, BrandingConfig } from "./document-config";
 import { getActiveBranding } from "./document-config";
 import type { Branch } from "@/types/branch";
-import type { ShipmentRecord } from "@/types/shipment";
+import type { ShipmentRecord, ShipmentFilters as IFilters } from "@/types/shipment";
 
 interface DocumentPreviewProps {
   config: DocumentConfig;
@@ -19,6 +19,7 @@ interface DocumentPreviewProps {
   dateRange?: string;
   generatedDate: string;
   branches?: Branch[];
+  filters?: IFilters;
 }
 
 export default function DocumentPreview({
@@ -29,6 +30,7 @@ export default function DocumentPreview({
   dateRange,
   generatedDate,
   branches = [],
+  filters,
 }: DocumentPreviewProps) {
   // Screen Pagination State
   const [page, setPage] = useState<number>(1);
@@ -60,9 +62,9 @@ export default function DocumentPreview({
   }));
 
   return (
-    <div className="w-full flex flex-col items-center gap-6">
+    <div className="w-full flex flex-col items-center gap-2">
       <DocumentLayout orientation={config.orientation}>
-        {/* 1. Header with branding fields */}
+        {/* 1. Header with branding and applied filter fields */}
         <DocumentHeader
           title={config.title}
           branding={branding}
@@ -70,31 +72,33 @@ export default function DocumentPreview({
           companyName={companyName}
           dateRange={dateRange}
           generatedDate={generatedDate}
+          filters={filters}
+          branches={branches}
         />
 
         {/* 2. Main Shipment Records Table */}
         {/* Screen view table wrapper: visible on screen, hidden on print */}
-        <div className="flex-1 min-h-[300px] no-print">
+        <div className="flex-1 no-print">
           <DocumentTable shipments={paginatedShipments} columns={config.columns} branches={branches} />
         </div>
 
         {/* Print view table wrapper: hidden on screen, visible on print */}
-        <div className="print-table-container flex-1 min-h-[300px]">
+        <div className="print-table-container flex-1">
           <DocumentTable shipments={shipments} columns={config.columns} branches={branches} />
         </div>
 
         {/* 3. Totals and Signatures footer block */}
-        <div className="mt-auto">
+        <div className="doc-footer-block mt-auto">
           {/* <TotalsSection totals={calculatedTotals} /> */}
 
           {/* Dynamic Footer / Signature placeholders */}
-          <div className="border-t border-slate-200 pt-8 mt-12 flex justify-between items-center text-[10px] text-slate-500 font-bold select-none">
+          <div className="border-t border-slate-200 pt-3 flex justify-between items-center text-[10px] text-slate-500 font-bold select-none">
             <div className="flex flex-col gap-0.5">
               <span>Prepared By: System Admin</span>
               <span>TMS Operations Team</span>
             </div>
             <div className="text-right flex flex-col gap-1 items-end">
-              <div className="h-10 w-28 border-b border-slate-350 mb-1" />
+              <div className="h-6 w-24 border-b border-slate-350 mb-0.5" />
               <span>Authorized Signatory </span>
               <span className="text-[9px] font-medium text-slate-400">Stamp & Signature Required</span>
             </div>

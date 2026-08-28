@@ -42,14 +42,14 @@ export default function DocumentTable({ shipments, columns, branches = [] }: Doc
   const isManyCols = columns.length > 10;
 
   return (
-    <div className="w-full overflow-hidden border border-slate-300 rounded-xl mb-6">
+    <div className="w-full overflow-x-auto overflow-y-auto  max-h-[435px] border border-slate-300 rounded-xl mb-2 shadow-inner">
       <table className="w-full border-collapse text-xs select-text">
-        <thead>
+        <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm">
           <tr className="bg-slate-100 border-b border-slate-300 text-slate-800 font-extrabold uppercase tracking-wider">
             {columns.map((col, idx) => (
               <th
                 key={idx}
-                className={`col-${col.key} font-black ${isManyCols ? "px-1.5 py-2 text-[8.5px] leading-tight" : "px-4 py-3 text-[10px]"} ${
+                className={`col-${col.key} font-black bg-slate-100 ${isManyCols ? "px-1.5 py-2 text-[8.5px] leading-tight" : "px-4 py-3 text-[10px]"} ${
                   col.align === "right"
                     ? "text-right"
                     : col.align === "center"

@@ -63,9 +63,9 @@ const sumAmounts = (shipments: ShipmentRecord[]): number => {
 // Default Branding details (static fallback, also used during SSR)
 const defaultBranding: BrandingConfig = {
   companyName: "TMS TRANSOS",
-  address: "Plot No. 12, Transport Nagar, Ambur, Tamil Nadu - 635802",
+  address: " Transport Nagar, Ambur, Tamil Nadu - 635802",
   phone: "+91 98765 43210 / +91 87654 32109",
-  email: "billing@tms-transport.com",
+  email: "billing@tms-transport. ",
   gstNumber: "33AABCA1234F1Z5",
   logoUrl: undefined,
 };

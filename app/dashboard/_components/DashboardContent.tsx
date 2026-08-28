@@ -16,7 +16,7 @@ export default function DashboardContent({ stats, error }: DashboardContentProps
 
   return (
     <div
-      className="flex-1 flex flex-col p-6 w-full mx-auto relative select-none gap-8 min-h-full transition-colors duration-300"
+      className="flex-1 flex flex-col p-6 pb-20 sm:pb-24 w-full mx-auto relative select-none gap-8 min-h-full transition-colors duration-300"
       style={isDarkMode ? { background: "#18191A" } : { background: "#F0F7FF" }}
     >
       {/* <DashboardHeader /> */}

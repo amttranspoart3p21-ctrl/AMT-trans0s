@@ -115,6 +115,46 @@
     height: auto !important;
     min-height: 0 !important;
     position: static !important;
+    overflow: visible !important;
+  }
+
+  /* Document print containers reset */
+  #printable-document,
+  #printable-document *,
+  .tax-invoice-document,
+  .tax-invoice-document * {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #printable-document,
+  .tax-invoice-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Prevent awkward page breaks inside header and summary sections */
+  .doc-header-container,
+  .doc-branding-row,
+  .doc-title-panel,
+  .doc-context-block,
+  .tax-invoice-header,
+  .tax-invoice-meta,
+  .doc-totals-box,
+  .doc-bank-details,
+  .doc-footer-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Force print table container visible and styled for high-density physical paper rendering */
@@ -122,41 +162,82 @@
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;
+    margin: 0 0 16px 0 !important;
     padding: 0 !important;
     background: white !important;
     color: black !important;
     box-sizing: border-box !important;
-    page-break-after: auto;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    page-break-after: auto !important;
     font-family: Arial, sans-serif !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Table structural sizing and typography */
-  .print-table-container table {
+  /* Prevent signature footer from overlapping table rows on multi-page printouts */
+  .doc-footer-block {
+    display: block !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 20px !important;
+    padding-top: 10px !important;
+    position: static !important;
+  }
+
+  .doc-footer-block > div {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+
+  /* Universal print table structural sizing and page-split prevention */
+  table,
+  .print-table-container table,
+  #printable-document table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 7.5pt !important;
     line-height: 1.15 !important;
     table-layout: fixed !important;
     page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   /* Header row repeat on multi-page printouts */
-  .print-table-container thead {
+  thead,
+  .print-table-container thead,
+  #printable-document thead {
     display: table-header-group !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
-  /* Ensure rows don't split awkwardly across pages */
-  .print-table-container tr {
+  tbody,
+  .print-table-container tbody,
+  #printable-document tbody {
+    display: table-row-group !important;
+  }
+
+  /* Ensure individual rows NEVER split mid-row across pages */
+  tr,
+  .print-table-container tr,
+  #printable-document tr {
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
     page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   /* Crisp, dark high-contrast borders for physical print legibility */
   .print-table-container th,
-  .print-table-container td {
+  .print-table-container td,
+  #printable-document th,
+  #printable-document td {
     border: 1px solid #1f2937 !important;
     padding: 2.5px 3.5px !important;
     text-align: left !important;
@@ -164,9 +245,12 @@
     word-break: break-word !important;
     overflow-wrap: break-word !important;
     color: black !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  .print-table-container th {
+  .print-table-container th,
+  #printable-document th {
     background-color: #e5e7eb !important;
     color: #111827 !important;
     font-weight: 700 !important;
@@ -177,7 +261,9 @@
 
   /* Distinct visual highlight for the summary/total row */
   .print-table-container tr.print-total-row th,
-  .print-table-container tr.print-total-row td {
+  .print-table-container tr.print-total-row td,
+  #printable-document tr.print-total-row th,
+  #printable-document tr.print-total-row td {
     background-color: #f3f4f6 !important;
     font-weight: 700 !important;
     border-top: 2px solid #111827 !important;
@@ -185,11 +271,13 @@
   }
 
   /* Numeric alignment helper */
-  .print-table-container .text-right {
+  .print-table-container .text-right,
+  #printable-document .text-right {
     text-align: right !important;
   }
 
-  .print-table-container .text-center {
+  .print-table-container .text-center,
+  #printable-document .text-center {
     text-align: center !important;
   }
 }

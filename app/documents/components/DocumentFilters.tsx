@@ -11,6 +11,7 @@ interface DocumentFiltersProps {
   visible: boolean;
   availableYears?: number[];
   packageOptions?: any[];
+  onClose?: () => void;
 }
 
 export default function DocumentFilters({
@@ -21,6 +22,7 @@ export default function DocumentFilters({
   visible,
   availableYears = [],
   packageOptions = [],
+  onClose,
 }: DocumentFiltersProps) {
   return (
     <div className="w-full">
@@ -32,6 +34,7 @@ export default function DocumentFilters({
         visible={visible}
         availableYears={availableYears}
         packageOptions={packageOptions}
+        onClose={onClose}
       />
     </div>
   );
