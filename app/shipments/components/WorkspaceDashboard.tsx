@@ -49,69 +49,69 @@ export default function WorkspaceDashboard({
     totalShipments: {
       label: "Total Shipments",
       value: total,
-      theme: "text-violet-400 border-violet-500/20 bg-violet-500/5",
+      theme: "text-slate-900 dark:text-zinc-100 border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#1f2021]",
     },
     pendingPayments: {
       label: isCompany ? "Pending Bills" : "Pending Payments",
       value: pendingPaymentsCount,
-      theme: "text-amber-400 border-amber-500/20 bg-amber-500/5",
+      theme: "text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30",
     },
     revenue: {
       label: isCompany ? "Total Revenue" : "Revenue",
       value: `₹${revenue.toLocaleString()}`,
-      theme: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
+      theme: "text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/30",
     },
     pendingAmount: {
       label: isCompany ? "Outstanding Amt" : "Pending Amount",
       value: `₹${pendingAmount.toLocaleString()}`,
-      theme: "text-rose-400 border-rose-500/20 bg-rose-500/5",
+      theme: "text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30",
     },
     delivered: {
       label: isCompany ? "Delivered Cargo" : "Delivered Status",
       value: delivered,
-      theme: "text-teal-400 border-teal-500/20 bg-teal-500/5",
+      theme: "text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30",
     },
     missing: {
       label: "Missing Cargo",
       value: missing,
-      theme: "text-red-400 border-red-500/20 bg-red-500/5",
+      theme: "text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/30",
     },
     damaged: {
       label: "Damaged Status",
       value: damaged,
-      theme: "text-rose-500 border-rose-500/20 bg-rose-500/5",
+      theme: "text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30",
     },
     todayShipments: {
       label: "Today's Shipments",
       value: today,
-      theme: "text-sky-400 border-sky-500/20 bg-sky-500/5",
+      theme: "text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-950/30",
     },
     sentShipments: {
       label: "Sent Shipments",
       value: sent,
-      theme: "text-sky-400 border-sky-500/20 bg-sky-500/5",
+      theme: "text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-950/30",
     },
     receivedShipments: {
       label: "Received Shipments",
       value: received,
-      theme: "text-teal-400 border-teal-500/20 bg-teal-500/5",
+      theme: "text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30",
     },
   };
 
   return (
-    <div className="w-full grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-6 select-none">
+    <div className="w-full grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4 select-none">
       {cards.map((cardKey) => {
         const card = cardDefinitions[cardKey];
         if (!card) return null;
         return (
           <div
             key={cardKey}
-            className={`flex flex-col border p-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] shadow-lg ${card.theme}`}
+            className={`flex flex-col border p-3 rounded-xl transition-all shadow-xs ${card.theme}`}
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400/80 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-0.5">
               {card.label}
             </span>
-            <span className="text-xl font-extrabold tracking-tight">
+            <span className="text-lg font-bold tracking-tight">
               {card.value}
             </span>
           </div>

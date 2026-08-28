@@ -54,10 +54,10 @@ export default function ShipmentTableCell({
   const isHighlighted = highlightedCells[shipment.shipmentId]?.has(String(field));
 
   const borderClass = hasWarning
-    ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-255"
+    ? "border-2 border-amber-300 dark:border-amber-700 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-amber-50/60 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"
     : isHighlighted
-    ? "border-emerald-500 bg-emerald-955/40 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.2)] transition-all duration-300"
-    : "border-slate-800 focus:border-violet-500 bg-slate-950 text-slate-200";
+    ? "border-2 border-emerald-500 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-xs transition-all duration-300"
+    : "border-2 border-transparent hover:border-slate-300 dark:hover:border-zinc-600 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 focus:shadow-sm focus:outline-none bg-transparent text-slate-800 dark:text-zinc-100 transition-all";
 
   const alignClass =
     field === "quantity" ||
@@ -66,7 +66,7 @@ export default function ShipmentTableCell({
     field === "transportRate" ||
     field === "pickupCharge" ||
     field === "deliveryCharge"
-      ? "text-right font-mono"
+      ? "text-right font-mono tabular-nums"
       : "";
 
   if (isEditing) {
@@ -76,7 +76,7 @@ export default function ShipmentTableCell({
           id={`cell-${shipment.shipmentId}-${field}`}
           tabIndex={0}
           onKeyDown={(e) => handleKeyDown(e, shipment.shipmentId, field)}
-          className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-right font-mono flex items-center justify-end select-none outline-none ${borderClass} bg-slate-950/40 text-slate-350`}
+          className={`w-full rounded-lg px-3 h-[36px] text-sm text-right font-mono tabular-nums font-medium flex items-center justify-end select-none outline-none ${borderClass}`}
         >
           {val !== null && val !== undefined ? `₹${val.toLocaleString()}` : "-"}
         </div>
@@ -159,9 +159,9 @@ export default function ShipmentTableCell({
               }
             }}
             onClick={() => setEditingCell?.({ shipmentId: shipment.shipmentId, field })}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
           >
-            <span className={!val ? "text-slate-500" : ""}>{displayVal}</span>
+            <span className={!val ? "text-slate-400 dark:text-zinc-500 font-normal" : "text-slate-800 dark:text-zinc-100 font-medium"}>{displayVal}</span>
           </div>
         );
       }
@@ -236,14 +236,14 @@ export default function ShipmentTableCell({
             onClick={() => {
               setEditingCell?.({ shipmentId: shipment.shipmentId, field });
             }}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
               isUnregistered
-                ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-250 shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+                ? "border-2 border-amber-300 dark:border-amber-700 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-amber-50/70 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 shadow-2xs"
                 : isNoRate
-                ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-250"
+                ? "border-2 border-rose-200 dark:border-rose-800 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-rose-50/70 dark:bg-rose-950/50 text-rose-900 dark:text-rose-200 shadow-2xs"
                 : isHighlighted
-                ? "border-emerald-500 bg-emerald-955/40 text-emerald-200"
-                : "border-slate-800 focus:border-violet-500 bg-slate-950 text-slate-200 hover:border-slate-700"
+                ? "border-2 border-emerald-500 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-xs"
+                : "border-2 border-transparent hover:border-slate-300 dark:hover:border-zinc-600 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 focus:shadow-sm focus:outline-none bg-transparent text-slate-800 dark:text-zinc-100"
             }`}
             title={
               isUnregistered
@@ -253,15 +253,17 @@ export default function ShipmentTableCell({
                 : undefined
             }
           >
-            <span className="truncate font-semibold text-slate-200">{val || "Select..."}</span>
+            <span className={`truncate ${val ? "text-slate-800 dark:text-zinc-100 font-medium" : "text-slate-400 dark:text-zinc-500 font-normal"}`}>
+              {val || "Select..."}
+            </span>
             {isUnregistered && (
-              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-450 border border-amber-500/20 shrink-0 select-none">
-                ⚠️ Unregistered
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 select-none flex items-center gap-1">
+                ⚠️ UNREGISTERED
               </span>
             )}
             {isNoRate && (
-              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-450 border border-amber-500/20 shrink-0 select-none">
-                ⚠️ No Rate
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shrink-0 select-none flex items-center gap-1">
+                🚫 NO RATE
               </span>
             )}
           </div>
@@ -332,21 +334,23 @@ export default function ShipmentTableCell({
             onClick={() => {
               setEditingCell?.({ shipmentId: shipment.shipmentId, field });
             }}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
               isUnregistered
-                ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-250 shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+                ? "border-2 border-amber-300 dark:border-amber-700 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-amber-50/70 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 shadow-2xs"
                 : hasWarning
-                ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-250"
+                ? "border-2 border-amber-300 dark:border-amber-700 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-amber-50/70 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 shadow-2xs"
                 : isHighlighted
-                ? "border-emerald-500 bg-emerald-955/40 text-emerald-200"
-                : "border-slate-800 focus:border-violet-500 bg-slate-950 text-slate-200 hover:border-slate-700"
+                ? "border-2 border-emerald-500 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-xs"
+                : "border-2 border-transparent hover:border-slate-300 dark:hover:border-zinc-600 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 focus:shadow-sm focus:outline-none bg-transparent text-slate-800 dark:text-zinc-100"
             }`}
             title={isUnregistered ? "Company is not registered in this branch master-data." : undefined}
           >
-            <span className="truncate font-semibold text-slate-200">{val || "Select..."}</span>
+            <span className={`truncate ${val ? "text-slate-800 dark:text-zinc-100 font-medium" : "text-slate-400 dark:text-zinc-500 font-normal"}`}>
+              {val || "Select..."}
+            </span>
             {isUnregistered && (
-              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-450 border border-amber-500/20 shrink-0 select-none">
-                ⚠️ Unregistered
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 select-none flex items-center gap-1">
+                ⚠️ UNREGISTERED
               </span>
             )}
           </div>
@@ -379,7 +383,7 @@ export default function ShipmentTableCell({
                 onChangeRow?.(shipment.shipmentId, field, newVal);
                 setEditingCell?.(null);
               }}
-              placeholder="Select Pay Company..."
+              placeholder="Select Payment Company..."
               warning={isUnregistered ? "Warning" : undefined}
               onClose={() => setEditingCell?.(null)}
               allowManualEntry={true}
@@ -389,6 +393,15 @@ export default function ShipmentTableCell({
           </div>
         );
       } else {
+        const resolvedText = getPaymentCompanyDisplayText({
+          paymentCompany: val !== null && val !== undefined ? String(val) : "",
+          paymentReceivingBranch: shipment.paymentReceivingBranch,
+          fromAmtBranch: shipment.fromAmtBranch,
+          toAmtBranch: shipment.toAmtBranch,
+          branches,
+          companies,
+        });
+
         return (
           <div
             id={`cell-${shipment.shipmentId}-${field}`}
@@ -404,28 +417,21 @@ export default function ShipmentTableCell({
             onClick={() => {
               setEditingCell?.({ shipmentId: shipment.shipmentId, field });
             }}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-all truncate flex items-center justify-between gap-1.5 ${
               isUnregistered
-                ? "border-amber-500/60 focus:border-amber-500 bg-amber-955/15 text-amber-250 shadow-[0_0_10px_rgba(245,158,11,0.15)]"
+                ? "border-2 border-amber-300 dark:border-amber-700 focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 bg-amber-50/70 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 shadow-2xs"
                 : isHighlighted
-                ? "border-emerald-500 bg-emerald-955/40 text-emerald-200"
-                : "border-slate-800 focus:border-violet-500 bg-slate-950 text-slate-200 hover:border-slate-700"
+                ? "border-2 border-emerald-500 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-xs"
+                : "border-2 border-transparent hover:border-slate-300 dark:hover:border-zinc-600 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-2xs focus:border-sky-600 dark:focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 focus:shadow-sm focus:outline-none bg-transparent text-slate-800 dark:text-zinc-100"
             }`}
             title={isUnregistered ? "Company is not registered in this branch master-data." : undefined}
           >
-            <span className="truncate font-semibold text-slate-200">
-              {getPaymentCompanyDisplayText({
-                paymentCompany: val !== null && val !== undefined ? String(val) : "",
-                paymentReceivingBranch: shipment.paymentReceivingBranch,
-                fromAmtBranch: shipment.fromAmtBranch,
-                toAmtBranch: shipment.toAmtBranch,
-                branches,
-                companies,
-              })}
+            <span className={`truncate ${resolvedText ? "text-slate-800 dark:text-zinc-100 font-medium" : "text-slate-400 dark:text-zinc-500 font-normal"}`}>
+              {resolvedText || "Select..."}
             </span>
             {isUnregistered && (
-              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-450 border border-amber-500/20 shrink-0 select-none">
-                ⚠️ Unregistered
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 select-none flex items-center gap-1">
+                ⚠️ UNREGISTERED
               </span>
             )}
           </div>
@@ -465,7 +471,7 @@ export default function ShipmentTableCell({
               }
             }}
             onClick={() => setEditingCell?.({ shipmentId: shipment.shipmentId, field })}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors font-semibold flex items-center ${borderClass}`}
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-colors font-medium flex items-center ${borderClass}`}
           >
             {val || "Pending"}
           </div>
@@ -505,7 +511,7 @@ export default function ShipmentTableCell({
               }
             }}
             onClick={() => setEditingCell?.({ shipmentId: shipment.shipmentId, field })}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors font-semibold flex items-center ${borderClass}`}
+            className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-colors font-medium flex items-center ${borderClass}`}
           >
             {val || "Not Delivered"}
           </div>
@@ -546,9 +552,9 @@ export default function ShipmentTableCell({
                 }
               }}
               onClick={() => setEditingCell?.({ shipmentId: shipment.shipmentId, field })}
-              className={`w-full border rounded-lg px-3.5 h-[42px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
+              className={`w-full rounded-lg px-3 h-[36px] text-sm text-left cursor-pointer transition-colors flex items-center ${borderClass}`}
             >
-              {val || "Select..."}
+              <span className={val ? "text-slate-800 dark:text-zinc-100 font-medium" : "text-slate-400 dark:text-zinc-500 font-normal"}>{val || "Select..."}</span>
             </div>
           );
         }
@@ -564,7 +570,7 @@ export default function ShipmentTableCell({
             onFocus={(e) => e.target.select?.()}
             data-shipment-id={shipment.shipmentId}
             data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass}`}
+            className={`w-full rounded-lg px-3 h-[36px] text-sm outline-none transition-colors dark:[color-scheme:dark] ${borderClass}`}
           />
         );
       case "number": {
@@ -586,8 +592,8 @@ export default function ShipmentTableCell({
             onFocus={(e) => e.target.select?.()}
             data-shipment-id={shipment.shipmentId}
             data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} ${alignClass} ${
-              isDisabled ? "opacity-50 bg-slate-900/80 cursor-not-allowed text-slate-500 border-slate-850" : ""
+            className={`w-full rounded-lg px-3 h-[36px] text-sm outline-none transition-colors ${borderClass} ${alignClass} ${
+              isDisabled ? "opacity-50 bg-slate-100 dark:bg-zinc-800/50 cursor-not-allowed text-slate-400 dark:text-zinc-500 border-slate-200 dark:border-zinc-800" : ""
             }`}
           />
         );
@@ -604,7 +610,7 @@ export default function ShipmentTableCell({
             onFocus={(e) => e.target.select?.()}
             data-shipment-id={shipment.shipmentId}
             data-field={field}
-            className={`w-full border rounded-lg px-3.5 h-[42px] text-sm outline-none transition-colors ${borderClass} ${alignClass}`}
+            className={`w-full rounded-lg px-3 h-[36px] text-sm outline-none transition-colors ${borderClass} ${alignClass}`}
           />
         );
     }
@@ -621,12 +627,12 @@ export default function ShipmentTableCell({
       companies,
     });
 
-    return <span className="text-xs text-slate-350">{resolvedText}</span>;
+    return <span className="text-sm text-slate-800 dark:text-zinc-100 font-normal truncate block">{resolvedText}</span>;
   }
 
   if (field === "paymentReceivingBranch") {
     const displayVal = val === "From Company" ? "From Branch" : val === "To Company" ? "To Branch" : "-";
-    return <span className="text-xs text-slate-350">{displayVal}</span>;
+    return <span className="text-sm text-slate-800 dark:text-zinc-100 font-normal truncate block">{displayVal}</span>;
   }
 
   switch (type) {
@@ -634,7 +640,7 @@ export default function ShipmentTableCell({
       if (field === "deliveryStatus") {
         return (
           <span
-            className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider ${getDeliveryStatusStyle(
+            className={`px-2.5 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider ${getDeliveryStatusStyle(
               val as any
             )}`}
           >
@@ -645,7 +651,7 @@ export default function ShipmentTableCell({
       if (field === "paymentStatus") {
         return (
           <span
-            className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider ${getPaymentStatusStyle(
+            className={`px-2.5 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider ${getPaymentStatusStyle(
               val as any
             )}`}
           >
@@ -653,17 +659,17 @@ export default function ShipmentTableCell({
           </span>
         );
       }
-      return <span className="text-xs text-slate-350">{String(val || "-")}</span>;
+      return <span className="text-sm text-slate-800 dark:text-zinc-100">{String(val || "-")}</span>;
     case "number":
       return (
-        <span className="font-mono text-slate-300 text-right block">
+        <span className="font-mono tabular-nums text-slate-900 dark:text-zinc-100 font-medium text-sm text-right block">
           {val !== null && val !== undefined ? `₹${val.toLocaleString()}` : "-"}
         </span>
       );
     case "text":
     default:
       return (
-        <span className={`text-xs text-slate-350 ${alignClass ? "block text-right" : ""}`}>
+        <span className={`text-sm text-slate-800 dark:text-zinc-100 font-normal ${alignClass ? "block text-right font-mono tabular-nums font-medium text-slate-900 dark:text-zinc-100" : "truncate block"}`}>
           {val !== null && val !== undefined ? String(val) : "-"}
         </span>
       );

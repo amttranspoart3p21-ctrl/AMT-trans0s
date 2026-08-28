@@ -87,7 +87,7 @@ export default function ShipmentTable({
 
 
   return (
-    <div className="w-full bg-slate-900/60 backdrop-blur-md border border-slate-850 rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0">
+    <div className="w-full bg-white dark:bg-[#1f2021] border border-slate-200/90 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex-1 flex flex-col min-h-0">
       <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 relative">
         <table 
           className="w-full text-left border-collapse min-w-[3400px]"
@@ -101,47 +101,46 @@ export default function ShipmentTable({
             onSort={onSort}
             onSelectAll={onSelectAll}
           />
-          <tbody className="divide-y divide-slate-850/60">
+          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/70">
             {loading ? (
-              Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={idx} className="border-b border-slate-850/60 h-[50px] bg-slate-950/10">
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-4 mx-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-16 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-20 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-24 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-28 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-24 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-28 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-20 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-8 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-12 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-12 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-20 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-12 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-20 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-12 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-14 ml-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-24 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-28 animate-pulse"></div></td>
-                  <td className="p-4 text-center"><div className="h-5 bg-slate-800/40 rounded-full w-16 mx-auto animate-pulse"></div></td>
-                  <td className="p-4 text-center"><div className="h-5 bg-slate-800/40 rounded-full w-16 mx-auto animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-16 animate-pulse"></div></td>
-                  <td className="p-4"><div className="h-4 bg-slate-800/40 rounded w-16 animate-pulse"></div></td>
-                  <td className="sticky right-0 bg-slate-950/90 backdrop-blur-sm p-4 border-l border-slate-800 text-center"><div className="h-8 bg-slate-800/40 rounded w-20 mx-auto animate-pulse"></div></td>
+              Array.from({ length: 8 }).map((_, idx) => (
+                <tr key={idx} className="border-b border-slate-100 dark:border-zinc-800/80 h-[50px] bg-white dark:bg-[#242526] even:bg-slate-50/50 dark:even:bg-[#1f2021]/80">
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-16 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-20 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-24 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-28 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-24 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-28 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-20 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-8 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-12 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-12 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-20 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-12 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-20 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-12 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-14 ml-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-24 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-28 animate-pulse"></div></td>
+                  <td className="p-3.5 text-center"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded-full w-16 mx-auto animate-pulse"></div></td>
+                  <td className="p-3.5 text-center"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded-full w-16 mx-auto animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-16 animate-pulse"></div></td>
+                  <td className="p-3.5"><div className="h-4 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-16 animate-pulse"></div></td>
+                  <td className="sticky right-0 bg-white/95 dark:bg-[#242526]/95 backdrop-blur-xs p-3.5 border-l border-slate-200 dark:border-zinc-800 text-center"><div className="h-6 bg-slate-200/60 dark:bg-zinc-700/60 rounded w-20 mx-auto animate-pulse"></div></td>
                 </tr>
               ))
             ) : shipments.length === 0 ? (
               <tr>
-                <td colSpan={23} className="py-12 px-4 text-center">
+                <td colSpan={22} className="py-16 px-4 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-slate-800/40 flex items-center justify-center text-slate-500 border border-slate-750">
+                    <div className="h-11 w-11 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400 dark:text-zinc-500 border border-slate-200 dark:border-zinc-700">
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4.5m15 3.5v-2m-3-1v2m-3-2v2M9 21h6" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v4.5m15 3.5v-2m-3-1v2m-3-2v2M9 21h6" />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-350">{emptyStateMessage}</p>
-                      <p className="text-[10px] text-slate-550 mt-0.5">Try adjusting your search query or filters.</p>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-zinc-200">{emptyStateMessage}</p>
+                      <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">Try adjusting your search query or active filters.</p>
                     </div>
                   </div>
                 </td>

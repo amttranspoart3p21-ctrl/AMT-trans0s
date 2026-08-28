@@ -283,7 +283,7 @@ export default function ShipmentWorkspace({
   const packageOptions = buildPackageOptions(packages, companies, branches, shipmentPackages);
 
   return (
-    <div className="flex-1 flex flex-col p-6 w-full mx-auto relative select-none h-full min-h-0 overflow-hidden">
+    <div className="flex-1 flex flex-col p-5 w-full mx-auto relative select-none h-full min-h-0 overflow-hidden">
       {/* Header Panel */}
       <ShipmentWorkspaceHeader
         title={title}
@@ -298,7 +298,7 @@ export default function ShipmentWorkspace({
         <>
           {/* Workspace KPIs Dashboard */}
           {context.type !== "global" && (
-            <div className="mt-6">
+            <div className="mt-4 mb-2.5">
               {dashboardLoading ? (
                 <div className="h-[96px] bg-slate-900/40 border border-slate-850 rounded-2xl animate-pulse flex items-center justify-center text-xs text-slate-500 font-medium">
                   Evaluating KPI metrics...
@@ -314,7 +314,7 @@ export default function ShipmentWorkspace({
           )}
 
           {/* Controller & Unified Action Toolbar */}
-          <div className={`shrink-0 ${hideHeader && context.type === "global" ? "mb-3" : "mt-4 mb-3"}`}>
+          <div className={`shrink-0 ${hideHeader && context.type === "global" ? "mb-2.5" : "mt-3 mb-2.5"}`}>
             <ShipmentToolbar
               mode={mode}
               setMode={setMode}
@@ -337,7 +337,7 @@ export default function ShipmentWorkspace({
           </div>
 
           {/* Advanced Filter Component */}
-          <div className="mb-3 shrink-0">
+          <div className="mb-2.5 shrink-0">
             <ShipmentFilters
               filters={filters}
               onChange={handleFilterChange}
@@ -346,6 +346,7 @@ export default function ShipmentWorkspace({
               visible={showFilters}
               availableYears={availableYears}
               packageOptions={packageOptions}
+              onClose={() => setShowFilters(false)}
             />
           </div>
 
@@ -385,7 +386,7 @@ export default function ShipmentWorkspace({
 
           {/* Pagination Component */}
           {!loading && shipments.length > 0 && (
-            <div className="mt-3 shrink-0">
+            <div className="mt-2.5 shrink-0">
               <Pagination
                 page={page}
                 totalPages={totalPages}

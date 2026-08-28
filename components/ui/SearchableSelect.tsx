@@ -31,6 +31,7 @@ interface SearchableSelectProps {
   manualEntryPosition?: "top" | "bottom";
   disabled?: boolean;
   hideClearOption?: boolean;
+  hideSearch?: boolean;
 }
 
 export default function SearchableSelect({
@@ -52,6 +53,7 @@ export default function SearchableSelect({
   manualEntryPosition = "bottom",
   disabled = false,
   hideClearOption = false,
+  hideSearch = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -259,17 +261,19 @@ export default function SearchableSelect({
 
   const hasBadge = !!selectedOption?.badge;
   const borderClass = error
-    ? "border-rose-500/70 focus:border-rose-500 bg-rose-955/10 text-rose-200"
+    ? "border border-rose-300 dark:border-rose-700 focus:border-sky-500 dark:focus:border-sky-500 bg-rose-50/50 dark:bg-rose-950/50 text-rose-900 dark:text-rose-200"
     : warning || hasBadge
-    ? "border-amber-500/70 focus:border-amber-500 bg-amber-955/10 text-amber-250"
-    : "border-slate-200 dark:border-slate-800 focus:border-[#0077c5] focus:ring-1 focus:ring-[#0077c5] bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200";
+    ? "border border-amber-300 dark:border-amber-700 focus:border-sky-500 dark:focus:border-sky-500 bg-amber-50/50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200"
+    : isOpen
+    ? "border-2 border-sky-500 dark:border-sky-500 bg-white dark:bg-zinc-900 shadow-xs text-slate-900 dark:text-zinc-100"
+    : "border border-slate-300/90 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-500 focus:border-sky-500 dark:focus:border-sky-500 focus:outline-none bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 shadow-2xs";
 
   return (
-    <div className="flex flex-col gap-1.5 w-full select-none" ref={containerRef}>
+    <div className="flex flex-col gap-1 w-full select-none" ref={containerRef}>
       {label && (
         <label
           htmlFor={selectId}
-          className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+          className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400"
         >
           {label}
         </label>
@@ -284,11 +288,11 @@ export default function SearchableSelect({
             setSearch("");
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full text-sm rounded-xl px-4 h-[42px] outline-none transition-colors border flex justify-between items-center text-left ${
-            disabled ? "bg-slate-900/60 border-slate-850 text-slate-550 cursor-not-allowed opacity-60 pointer-events-none" : borderClass
+          className={`w-full text-sm rounded-lg px-3 h-[36px] outline-none transition-all flex justify-between items-center text-left ${
+            disabled ? "bg-slate-100 dark:bg-zinc-800 border-2 border-transparent text-slate-400 dark:text-zinc-500 cursor-not-allowed opacity-60 pointer-events-none" : borderClass
           } ${className}`}
         >
-          <span className={`flex items-center gap-2 flex-1 min-w-0 ${selectedOption ? "text-slate-800 dark:text-slate-200 font-medium" : "text-slate-400 dark:text-slate-500"}`}>
+          <span className={`flex items-center gap-2 flex-1 min-w-0 ${selectedOption ? "text-slate-800 dark:text-zinc-100 font-medium" : "text-slate-400 dark:text-zinc-400 font-normal"}`}>
             <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
             {selectedOption?.badge && (
               <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border tracking-wider select-none shrink-0 ${
@@ -298,13 +302,13 @@ export default function SearchableSelect({
                   ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
                   : selectedOption.badgeType === "shipment"
                   ? "bg-amber-500/10 text-amber-450 border-amber-500/20"
-                  : "bg-slate-800 text-slate-400 border-slate-700"
+                  : "bg-slate-800 dark:bg-zinc-800 text-slate-400 dark:text-zinc-300 border-slate-700 dark:border-zinc-700"
               }`}>
                 {selectedOption.badge}
               </span>
             )}
           </span>
-          <span className="text-slate-500 shrink-0 ml-1">
+          <span className="text-slate-500 dark:text-zinc-400 shrink-0 ml-1">
             <svg className={`h-4.5 w-4.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
@@ -314,7 +318,7 @@ export default function SearchableSelect({
         {isOpen && mounted && createPortal(
           <div 
             ref={dropdownRef}
-            className="fixed z-[9999] bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-2.5 flex flex-col gap-2"
+            className="fixed z-[9999] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl p-2 flex flex-col gap-1.5"
             style={{
               top: dropdownPos.top !== "auto" ? dropdownPos.top : undefined,
               bottom: dropdownPos.bottom !== "auto" ? dropdownPos.bottom : undefined,
@@ -324,13 +328,13 @@ export default function SearchableSelect({
           >
             {isManualMode ? (
               <div className="flex flex-col gap-2 p-1.5" onKeyDown={(e) => e.stopPropagation()}>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">{manualEntryLabel}</span>
+                <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider block">{manualEntryLabel}</span>
                 <input
                   type="text"
                   value={manualValue}
                   onChange={(e) => setManualValue(e.target.value)}
                   placeholder={manualEntryPlaceholder}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 h-[42px] text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 h-[36px] text-xs text-slate-800 dark:text-zinc-100 placeholder-slate-400 outline-none focus:border-sky-500 transition-colors"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -350,7 +354,7 @@ export default function SearchableSelect({
                   <button
                     type="button"
                     onClick={() => setIsManualMode(false)}
-                    className="px-3 py-2 text-[11px] font-bold rounded-lg border border-slate-800 text-slate-400 hover:bg-slate-900 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -363,7 +367,7 @@ export default function SearchableSelect({
                         onClose?.();
                       }
                     }}
-                    className="px-3 py-2 text-[11px] font-bold rounded-lg bg-violet-600 text-white hover:bg-violet-500 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-500 transition-colors cursor-pointer"
                   >
                     Save
                   </button>
@@ -371,22 +375,24 @@ export default function SearchableSelect({
               </div>
             ) : (
               <>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search..."
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 h-[42px] text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-500 transition-colors"
-                    autoFocus
-                  />
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </span>
-                </div>
+                {!hideSearch && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Search..."
+                      className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 h-[34px] text-xs text-slate-800 dark:text-zinc-100 placeholder-slate-400 outline-none focus:border-sky-500 transition-colors"
+                      autoFocus
+                    />
+                    <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </span>
+                  </div>
+                )}
 
                 {/* Manual entry button - always visible, outside scrollable area */}
                 {allowManualEntry && (
@@ -397,11 +403,11 @@ export default function SearchableSelect({
                         setManualValue(search);
                         setIsManualMode(true);
                       }}
-                      className="w-full text-left px-3.5 py-2.5 rounded-xl text-sm text-violet-400 hover:bg-slate-900/60 hover:text-violet-300 transition-all border border-transparent cursor-pointer font-bold flex items-center gap-1.5 shrink-0"
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-900/60 transition-all border border-transparent cursor-pointer font-semibold flex items-center gap-1.5 shrink-0"
                     >
-                      <span className="text-base font-bold">+</span> {manualEntryButtonText}
+                      <span className="text-sm font-bold">+</span> {manualEntryButtonText}
                     </button>
-                    <div className="border-t border-slate-800/80 my-0.5 shrink-0" />
+                    <div className="border-t border-slate-100 dark:border-slate-800/80 my-0.5 shrink-0" />
                   </>
                 )}
 
@@ -418,7 +424,7 @@ export default function SearchableSelect({
                         setIsOpen(false);
                         onClose?.();
                       }}
-                      className="w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-colors hover:bg-slate-900 text-slate-400 hover:text-slate-250 cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
                       Clear Selection
                     </button>
@@ -441,7 +447,7 @@ export default function SearchableSelect({
                       return sortedOptions.map((opt) => {
                         if (opt.isDivider) {
                           return (
-                            <div key={opt.value} className="border-t border-slate-800/80 my-1 shrink-0" />
+                            <div key={opt.value} className="border-t border-slate-100 dark:border-slate-800/80 my-1 shrink-0" />
                           );
                         }
 
@@ -462,33 +468,33 @@ export default function SearchableSelect({
                               onClose?.();
                             }}
                             {...refProp}
-                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-all flex justify-between items-center cursor-pointer ${
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all flex justify-between items-center cursor-pointer ${
                               opt.disabled
-                                ? "opacity-40 cursor-not-allowed text-slate-500"
+                                ? "opacity-40 cursor-not-allowed text-slate-400"
                                 : isSelected
-                                ? "bg-violet-600/20 text-violet-400 border border-violet-500/30"
+                                ? "bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800"
                                 : isHighlighted
-                                ? "bg-slate-900 text-slate-200 border border-slate-800"
-                                : "text-slate-350 hover:bg-slate-900/60 hover:text-slate-100 border border-transparent"
+                                ? "bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                                : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/60 border border-transparent"
                             }`}
                           >
                             <span>{opt.label}</span>
                             <div className="flex items-center gap-1.5 ml-2 shrink-0">
                               {opt.badge && (
-                                <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border tracking-wider select-none ${
+                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md border tracking-wider select-none ${
                                   opt.badgeType === "global"
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                                     : opt.badgeType === "company"
-                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                    ? "bg-blue-50 text-blue-700 border-blue-300"
                                     : opt.badgeType === "shipment"
-                                    ? "bg-amber-500/10 text-amber-450 border-amber-500/20"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    ? "bg-amber-50 text-amber-700 border-amber-300"
+                                    : "bg-slate-100 text-slate-600 border-slate-200"
                                 }`}>
                                   {opt.badge}
                                 </span>
                               )}
                               {opt.disabled && opt.disabledReason && (
-                                <span className="text-[10px] text-slate-500 font-bold">
+                                <span className="text-[10px] text-slate-400 font-medium">
                                   {opt.disabledReason}
                                 </span>
                               )}

@@ -55,43 +55,41 @@ export default function Pagination({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-6 px-6 py-4 bg-slate-900/60 backdrop-blur-md border border-slate-850 rounded-2xl shadow-xl select-none">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-2 py-2 select-none">
       {/* Left side: Range indicator */}
       <div className="flex items-center">
-        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-          Showing <span className="font-bold text-slate-350">{fromIndex}–{toIndex}</span> of{" "}
-          <span className="font-bold text-slate-350">{totalRecords}</span> {entityName}
+        <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+          SHOWING {fromIndex}–{toIndex} OF {totalRecords} {entityName.toUpperCase()}
         </p>
       </div>
 
-      {/* Middle: Rows per page selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rows per page:</span>
-        <select
-          value={limit}
-          onChange={(e) => onLimitChange(Number(e.target.value))}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-350 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none cursor-pointer"
-        >
-          {(limitOptions || [15, 25, 50, 100]).map((opt) => (
-            <option key={opt} value={opt}>
-              {opt} Rows
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Right side: Rows per page and page navigation */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">ROWS PER PAGE:</span>
+          <select
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+            className="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-2 py-1 text-xs font-semibold text-slate-700 dark:text-zinc-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none cursor-pointer shadow-2xs"
+          >
+            {(limitOptions || [15, 25, 50, 100]).map((opt) => (
+              <option key={opt} value={opt} className="bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100">
+                {opt} Rows
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Right side: Page navigation */}
-      {totalPages > 1 && (
-        <div>
-          <nav className="relative z-0 inline-flex rounded-xl shadow-sm gap-1.5" aria-label="Pagination">
+        {totalPages > 1 && (
+          <nav className="inline-flex rounded-lg shadow-2xs gap-1" aria-label="Pagination">
             {/* Previous */}
             <button
               onClick={() => onPageChange(Math.max(page - 1, 1))}
               disabled={page === 1}
-              className="relative inline-flex items-center p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-850/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              className="inline-flex items-center p-1.5 rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
               <span className="sr-only">Previous</span>
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
@@ -102,7 +100,7 @@ export default function Pagination({
                 return (
                   <span
                     key={`dots-${idx}`}
-                    className="relative inline-flex items-center px-3.5 py-1.5 text-xs font-bold text-slate-500 select-none"
+                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-slate-400 dark:text-zinc-500 select-none"
                   >
                     ...
                   </span>
@@ -113,10 +111,10 @@ export default function Pagination({
                 <button
                   key={`page-${pageNum}`}
                   onClick={() => onPageChange(pageNum as number)}
-                  className={`relative inline-flex items-center px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
                     isCurrent
-                      ? "z-10 bg-violet-600 border-violet-500 text-white shadow-md shadow-violet-500/20"
-                      : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-250 hover:bg-slate-850/80"
+                      ? "z-10 bg-sky-600 border-sky-600 text-white shadow-xs"
+                      : "bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700"
                   }`}
                 >
                   {pageNum}
@@ -128,16 +126,16 @@ export default function Pagination({
             <button
               onClick={() => onPageChange(Math.min(page + 1, totalPages))}
               disabled={page === totalPages}
-              className="relative inline-flex items-center p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-850/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              className="inline-flex items-center p-1.5 rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
               <span className="sr-only">Next</span>
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </nav>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -77,29 +77,17 @@ export default function ShipmentTableRow({
   return (
     <tr
       title={hasWarnings ? `Validation issues:\n${warnings.join("\n")}` : undefined}
-      className={`transition-colors border-l-2 h-[50px] ${
-        isDirty
-          ? "bg-emerald-950/10 border-emerald-500 hover:bg-emerald-950/20"
+      className={`transition-colors border-b border-slate-100/90 dark:border-zinc-800/70 border-l-2 h-[50px] group ${
+        isSelected
+          ? "bg-sky-50/70 dark:bg-sky-950/40 border-l-sky-500 hover:bg-sky-50 dark:hover:bg-sky-950/60"
+          : isDirty
+          ? "bg-emerald-50/40 dark:bg-emerald-950/30 border-l-emerald-500 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/50"
           : hasWarnings
-          ? "bg-amber-955/5 border-amber-500/50 hover:bg-amber-955/10"
-          : "hover:bg-slate-800/30 border-transparent"
+          ? "bg-amber-50/40 dark:bg-amber-950/30 border-l-amber-500 hover:bg-amber-50/60 dark:hover:bg-amber-950/50"
+          : "bg-white even:bg-[#f8fafc]/60 hover:bg-slate-50 dark:bg-[#242526] dark:even:bg-[#1c1d1e]/90 dark:hover:bg-zinc-800/80 border-l-transparent"
       }`}
     >
-      {/* Checkbox Select Cell */}
-      <td className="py-[4px] px-3 text-center align-middle w-[50px]" style={{ width: "50px", minWidth: "50px" }}>
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => {
-            const newSelected = isSelected
-              ? selectedIds.filter((id) => id !== shipment.shipmentId)
-              : [...selectedIds, shipment.shipmentId];
-            onSelectRow?.(newSelected);
-          }}
-          className="rounded border-slate-700 bg-slate-950 text-violet-600 focus:ring-violet-500 cursor-pointer h-3.5 w-3.5"
-        />
-      </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "110px", minWidth: "110px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "115px", minWidth: "115px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="date"
@@ -117,7 +105,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 font-semibold text-slate-200 align-middle" style={{ width: "110px", minWidth: "110px" }}>
+      <td className="py-2 px-3.5 font-semibold text-slate-800 dark:text-zinc-100 align-middle" style={{ width: "120px", minWidth: "120px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="vehicleNumber"
@@ -135,7 +123,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "135px", minWidth: "135px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="fromAmtBranch"
@@ -154,7 +142,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "240px", minWidth: "240px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "240px", minWidth: "240px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="fromCompany"
@@ -173,7 +161,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "135px", minWidth: "135px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="toAmtBranch"
@@ -192,7 +180,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "240px", minWidth: "240px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "240px", minWidth: "240px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="toCompany"
@@ -211,7 +199,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "130px", minWidth: "130px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="ourInvoiceNumber"
@@ -229,7 +217,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "150px", minWidth: "150px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "150px", minWidth: "150px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="customerInvoiceNumber"
@@ -247,7 +235,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "200px", minWidth: "200px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "200px", minWidth: "200px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="packageType"
@@ -266,7 +254,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "90px", minWidth: "90px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "90px", minWidth: "90px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="quantity"
@@ -284,7 +272,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "140px", minWidth: "140px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="pickupService"
@@ -303,7 +291,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "150px", minWidth: "150px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "150px", minWidth: "150px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="deliveryService"
@@ -322,7 +310,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "130px", minWidth: "130px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "135px", minWidth: "135px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="paymentReceivingBranch"
@@ -341,7 +329,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "240px", minWidth: "240px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "240px", minWidth: "240px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="paymentCompany"
@@ -360,7 +348,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "130px", minWidth: "130px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="transportRate"
@@ -378,7 +366,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "125px", minWidth: "125px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="pickupCharge"
@@ -396,7 +384,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "120px", minWidth: "120px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "125px", minWidth: "125px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="deliveryCharge"
@@ -414,7 +402,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "140px", minWidth: "140px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="pricePerPiece"
@@ -432,7 +420,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 align-middle" style={{ width: "140px", minWidth: "140px" }}>
+      <td className="py-2 px-3.5 align-middle" style={{ width: "140px", minWidth: "140px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="totalAmount"
@@ -450,7 +438,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 text-center align-middle" style={{ width: "140px", minWidth: "140px" }}>
+      <td className="py-2 px-3.5 text-center align-middle" style={{ width: "140px", minWidth: "140px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="deliveryStatus"
@@ -468,7 +456,7 @@ export default function ShipmentTableRow({
           handleKeyDown={handleKeyDown}
         />
       </td>
-      <td className="py-[4px] px-3 text-center align-middle" style={{ width: "120px", minWidth: "120px" }}>
+      <td className="py-2 px-3.5 text-center align-middle" style={{ width: "130px", minWidth: "130px" }}>
         <ShipmentTableCell
           shipment={shipment}
           field="paymentStatus"

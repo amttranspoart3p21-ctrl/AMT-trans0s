@@ -35,38 +35,43 @@ export default function Modal({
     sm: "max-w-md",
     md: "max-w-lg",
     lg: "max-w-2xl",
-    xl: "max-w-4xl",
+    xl: "max-w-5xl",
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in select-none">
       {/* Backdrop tap closer */}
       <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
       <div
-        className={`w-full ${sizeClasses[size]} bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col relative overflow-hidden max-h-[90vh]`}
+        className={`w-full ${sizeClasses[size]} bg-white dark:bg-[#18191A] border border-slate-200/90 dark:border-zinc-800 rounded-2xl shadow-2xl flex flex-col relative overflow-hidden max-h-[92vh] transition-all`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center px-6 py-4.5 border-b border-slate-800">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-200">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
+          <h3 className="text-base font-bold uppercase tracking-wide text-slate-800 dark:text-zinc-100">
             {title}
           </h3>
-          <Button variant="ghost" size="xs" onClick={onClose} className="p-1 hover:bg-slate-800">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+            title="Close"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </Button>
+          </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 text-xs text-slate-300">
+        <div className="flex-1 overflow-y-auto px-6 py-5 text-xs text-slate-800 dark:text-zinc-200">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-950/40">
+          <div className="px-6 py-3.5 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-3 bg-slate-50/50 dark:bg-[#18191A]">
             {footer}
           </div>
         )}
