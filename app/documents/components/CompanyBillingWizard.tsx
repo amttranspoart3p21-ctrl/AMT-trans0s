@@ -114,21 +114,6 @@ export default function CompanyBillingWizard({
     }
   }, [selectedCompany]);
 
-  // Resolve branch code helper for accurate branch matching
-  const resolveBranchCode = useCallback(
-    (clean: string): string => {
-      if (!clean) return "";
-      const match = branches.find(
-        (b) =>
-          b.branchCode.toLowerCase() === clean.toLowerCase() ||
-          b.branchName.toLowerCase() === clean.toLowerCase() ||
-          b.branchId.toLowerCase() === clean.toLowerCase()
-      );
-      return match ? match.branchCode : clean;
-    },
-    [branches]
-  );
-
   // Strictly filter shipments based on Payment Branch priority & Company resolution hierarchy
   const filteredShipments = useMemo(() => {
     if (!selectedCompany) return shipments;

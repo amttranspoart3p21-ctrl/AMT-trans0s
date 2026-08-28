@@ -13,7 +13,7 @@ export default function Layout({ children }: LayoutProps) {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-[#F0F7FF] dark:bg-[#18191A]">
+        <main className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-[#F0F7FF] dark:bg-[#18191A]">
           <AuthGuard>{children}</AuthGuard>
         </main>
       </div>

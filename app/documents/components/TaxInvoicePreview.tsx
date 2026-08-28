@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import type { ShipmentRecord } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import { getCompanySettings, DEFAULT_COMPANY_SETTINGS, type CompanySettings } from "@/utils/settings";
+import { resolveBranchCode, formatCurrency, formatDate } from "../utils/documentFormatters";
 
 export interface InvoiceHeaderDetails {
   gstinNo: string;
@@ -51,23 +52,10 @@ export default function TaxInvoicePreview({
   const phoneDisplay = [settings.phoneNumber1, settings.phoneNumber2]
     .filter(Boolean)
     .join(" / ");
-  // Resolve branch codes cleanly for display
-  const resolveBranchCode = (val: string): string => {
-    if (!val) return "-";
-    const clean = val.trim();
-    if (!clean) return "-";
-    const match = branches.find(
-      (b) =>
-        b.branchCode.toLowerCase() === clean.toLowerCase() ||
-        b.branchName.toLowerCase() === clean.toLowerCase() ||
-        b.branchId.toLowerCase() === clean.toLowerCase()
-    );
-    return match ? match.branchCode : clean;
-  };
 
   const formatCompanyBranch = (company: string | undefined, branchVal: string | undefined): string => {
     const comp = (company || "").trim();
-    const bCode = resolveBranchCode(branchVal || "");
+    const bCode = resolveBranchCode(branchVal || "", branches);
     const branchStr = bCode && bCode !== "-" ? bCode : (branchVal || "").trim();
 
     if (comp && branchStr) {
@@ -87,7 +75,7 @@ export default function TaxInvoicePreview({
       branchVal = s.toAmtBranch || "";
     }
 
-    const bCode = resolveBranchCode(branchVal);
+    const bCode = resolveBranchCode(branchVal, branches);
     const branchStr = bCode && bCode !== "-" ? bCode : branchVal;
 
     if (comp && branchStr) {
@@ -98,28 +86,6 @@ export default function TaxInvoicePreview({
 
   // Total amount calculation from filtered shipments
   const subtotal = shipments.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-
-  const formatDate = (val: string): string => {
-    if (!val) return "-";
-    try {
-      const d = new Date(val);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "2-digit",
-        });
-      }
-    } catch (_) {}
-    return val;
-  };
-
-  const formatCurrency = (amount: number): string => {
-    return `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
 
   return (
     <div className="w-full doc-layout-outer bg-slate-950 p-4 md:p-6 flex justify-center overflow-x-auto select-text">
@@ -246,7 +212,7 @@ export default function TaxInvoicePreview({
                         {idx + 1}
                       </td>
                       <td className="py-2 px-2 border-r border-slate-200 text-[10.5px] font-semibold text-slate-800">
-                        {formatDate(s.date)}
+                        {formatDate(s.date, "2-digit")}
                       </td>
                       <td className="py-2 px-2 border-r border-slate-200 text-[10.5px] font-mono text-slate-800">
                         {dcNoDisplay}
@@ -267,10 +233,10 @@ export default function TaxInvoicePreview({
                         {s.quantity || "1"}
                       </td>
                       <td className="py-2 px-2 text-right border-r border-slate-200 text-[10.5px] font-mono text-slate-800">
-                        {formatCurrency(rateVal)}
+                        {formatCurrency(rateVal, 2)}
                       </td>
                       <td className="py-2 px-2 text-right text-[10.5px] font-mono font-bold text-slate-900">
-                        {formatCurrency(totalVal)}
+                        {formatCurrency(totalVal, 2)}
                       </td>
                     </tr>
                   );
@@ -284,7 +250,7 @@ export default function TaxInvoicePreview({
         <div className="flex justify-end mb-6">
           <div className="w-64 bg-slate-50 p-3 rounded-lg border border-slate-300 flex justify-between items-center text-slate-900 font-extrabold text-sm">
             <span>Total Amount:</span>
-            <span className="font-mono text-violet-700">{formatCurrency(subtotal)}</span>
+            <span className="font-mono text-violet-700">{formatCurrency(subtotal, 2)}</span>
           </div>
         </div>
 

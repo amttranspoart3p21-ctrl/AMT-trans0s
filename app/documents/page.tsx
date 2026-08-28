@@ -14,6 +14,7 @@ import DocumentToolbar from "./components/DocumentToolbar";
 import DocumentPreview from "./components/DocumentPreview";
 import CompanyBillingWizard from "./components/CompanyBillingWizard";
 import { documentConfigurations } from "./components/document-config";
+import { buildPackageOptions } from "@/app/shipments/utils/packageOptions";
 
 export default function DocumentsPage() {
   // Document Type Selector State
@@ -217,66 +218,7 @@ export default function DocumentsPage() {
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
-  const buildPackageOptions = () => {
-    const list: any[] = [];
-    const seenValues = new Set<string>();
-
-    // 1. Global packages
-    const globalPkgs = packages.filter((p) => !p.companyName && p.status === "Active");
-    globalPkgs.forEach((p) => {
-      const val = p.packageName;
-      if (!seenValues.has(val.toLowerCase())) {
-        seenValues.add(val.toLowerCase());
-        list.push({
-          value: val,
-          label: `📦 ${val}`,
-          badge: "Global",
-          badgeType: "global",
-        });
-      }
-    });
-
-    // 2. Company packages
-    const companyPkgs = packages.filter((p) => p.companyName && p.status === "Active");
-    companyPkgs.forEach((p) => {
-      const comp = companies.find((c) => c.companyId === p.companyId);
-      const branch = branches.find((b) => b.branchId === comp?.branchId || b.branchName === comp?.branchName);
-      
-      const bCode = branch?.branchCode || comp?.branchCode || comp?.branchName?.slice(0, 3).toUpperCase() || "";
-      const displayBranchCode = bCode ? ` - ${bCode}` : "";
-
-      const val = `${p.packageName} (${p.companyName}${displayBranchCode})`;
-      if (!seenValues.has(val.toLowerCase())) {
-        seenValues.add(val.toLowerCase());
-        list.push({
-          value: val,
-          label: `📦 ${val}`,
-          badge: "Company",
-          badgeType: "company",
-        });
-      }
-    });
-
-    // 3. Unknown / OCR packages from shipments
-    shipmentPackages.forEach((pkgVal) => {
-      const isRegistered = packages.some(
-        (p) => p.packageName.toLowerCase().trim() === pkgVal.toLowerCase().trim()
-      );
-      if (!isRegistered && !seenValues.has(pkgVal.toLowerCase())) {
-        seenValues.add(pkgVal.toLowerCase());
-        list.push({
-          value: pkgVal,
-          label: `⚠ ${pkgVal}`,
-          badge: "Shipment Only",
-          badgeType: "shipment",
-        });
-      }
-    });
-
-    return list;
-  };
-
-  const packageOptions = buildPackageOptions();
+  const packageOptions = buildPackageOptions(packages, companies, branches, shipmentPackages);
 
   return (
     <Layout>

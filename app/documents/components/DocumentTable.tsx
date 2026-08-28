@@ -2,6 +2,7 @@ import React from "react";
 import type { ShipmentRecord } from "@/types/shipment";
 import type { Branch } from "@/types/branch";
 import type { ColumnConfig } from "./document-config";
+import { resolveBranchCode, formatCurrency, formatDate } from "../utils/documentFormatters";
 
 interface DocumentTableProps {
   shipments: ShipmentRecord[];
@@ -10,28 +11,13 @@ interface DocumentTableProps {
 }
 
 export default function DocumentTable({ shipments, columns, branches = [] }: DocumentTableProps) {
-  // Dynamic branch code lookup helper using active system branches list
-  const resolveBranchCode = (val: any): string => {
-    if (!val) return "-";
-    const clean = String(val).trim();
-    if (!clean) return "-";
-
-    const match = branches.find(
-      (b) =>
-        b.branchCode.toLowerCase() === clean.toLowerCase() ||
-        b.branchName.toLowerCase() === clean.toLowerCase() ||
-        b.branchId.toLowerCase() === clean.toLowerCase()
-    );
-    return match ? match.branchCode : clean;
-  };
-
   // Helper to format values nicely based on column key and format
   const formatValue = (val: any, colKey: string, format?: string, rIdx: number = 0): string => {
     if (colKey === "sNo") {
       return String(rIdx + 1);
     }
     if (colKey === "fromAmtBranch" || colKey === "toAmtBranch") {
-      return resolveBranchCode(val);
+      return resolveBranchCode(val, branches);
     }
     if (colKey === "paymentReceivingBranch") {
       if (!val) return "-";
@@ -43,24 +29,11 @@ export default function DocumentTable({ shipments, columns, branches = [] }: Doc
     if (val === null || val === undefined || val === "") return "-";
 
     if (format === "date") {
-      try {
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) {
-          return d.toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          });
-        }
-      } catch (_) {}
-      return String(val);
+      return formatDate(val, "numeric");
     }
 
     if (format === "currency") {
-      const num = Number(val);
-      if (!isNaN(num)) {
-        return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-      }
+      return formatCurrency(val, 0);
     }
 
     return String(val);
