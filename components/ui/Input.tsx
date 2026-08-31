@@ -21,17 +21,17 @@ export default function Input({
   const inputId = id || autoId;
 
   const borderClass = error
-    ? "border-rose-500/70 focus:border-rose-500 bg-rose-955/10 text-rose-200"
+    ? "border-rose-400 dark:border-rose-500/70 focus:border-rose-500 bg-rose-50 dark:bg-rose-955/10 text-rose-900 dark:text-rose-200"
     : warning
-    ? "border-amber-500/70 focus:border-amber-500 bg-amber-955/10 text-amber-250"
-    : "border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 bg-slate-950 text-slate-200";
+    ? "border-amber-400 dark:border-amber-500/70 focus:border-amber-500 bg-amber-50 dark:bg-amber-955/10 text-amber-900 dark:text-amber-250"
+    : "border-slate-300 dark:border-zinc-800 focus:border-sky-500 dark:focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 bg-slate-50/80 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500";
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[10px] font-bold uppercase tracking-wider text-slate-400"
+          className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400"
         >
           {label}
         </label>
