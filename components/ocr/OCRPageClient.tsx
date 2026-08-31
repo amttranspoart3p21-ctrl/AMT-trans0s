@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import Layout from "@/components/layout/Layout";
 import type { Branch } from "@/types/branch";
 import type { OcrMetadata, EntryMode } from "@/types/ocr";
@@ -142,7 +143,7 @@ export default function OCRPageClient() {
           isBranchSelectionValid;
 
         if (!isFormComplete) {
-          alert(
+          toast.error(
             "Please fill in all Shipment Information (Step 1) before uploading the register image."
           );
           e.target.value = "";
@@ -178,7 +179,7 @@ export default function OCRPageClient() {
   // Save approved valid rows to Excel
   const handleSaveAll = async () => {
     if (!isBranchSelectionValid) {
-      alert(
+      toast.error(
         "Origin and Destination branches cannot be the same. Please select different branches."
       );
       return;
@@ -187,7 +188,7 @@ export default function OCRPageClient() {
     setSaveResult(null);
 
     if (shipments.length === 0) {
-      alert("No shipments found to save.");
+      toast.error("No shipments found to save.");
       setSaving(false);
       return;
     }
@@ -203,7 +204,7 @@ export default function OCRPageClient() {
       setSaveResult(resData);
 
       if (resData.success && resData.totalSaved > 0) {
-        alert(`Successfully saved ${resData.totalSaved} shipment(s) to Excel!`);
+        toast.success(`Successfully saved ${resData.totalSaved} shipment(s) to Excel!`);
         resetShipments();
         resetOcrWorkflow();
         setIsInReviewWorkspace(false);
@@ -219,10 +220,10 @@ export default function OCRPageClient() {
         const errorDetail =
           resData.failedRows?.[0]?.error ||
           "No shipments were saved. Please verify row details and date.";
-        alert(`Failed to save shipments to Excel: ${errorDetail}`);
+        toast.error(`Failed to save shipments to Excel: ${errorDetail}`);
       }
     } catch (err: any) {
-      alert(err.message || "An error occurred while saving shipments.");
+      toast.error(err.message || "An error occurred while saving shipments.");
     } finally {
       setSaving(false);
     }

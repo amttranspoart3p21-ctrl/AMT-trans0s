@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import toast from "react-hot-toast";
 import type { Branch } from "@/types/branch";
 import type {
   OcrMetadata,
@@ -192,7 +193,7 @@ export default function ReviewWorkspace({
     const isValid = validateMetadata();
     if (!isValid) return;
     if (shipments.length === 0) {
-      alert("No shipment entries found to save. Please add rows or run OCR.");
+      toast.error("No shipment entries found to save. Please add rows or run OCR.");
       return;
     }
     onSaveAll();

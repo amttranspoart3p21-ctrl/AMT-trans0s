@@ -28,32 +28,17 @@ export function useTableKeyboardNavigation({
 
       switch (e.key) {
         case "ArrowUp":
-          nextRowIdx = Math.max(0, rowIdx - 1);
-          shouldPreventDefault = true;
+          if ((e.target as HTMLElement).tagName !== "SELECT") {
+            nextRowIdx = Math.max(0, rowIdx - 1);
+            shouldPreventDefault = true;
+          }
           break;
         case "ArrowDown":
-          nextRowIdx = Math.min(shipments.length - 1, rowIdx + 1);
-          shouldPreventDefault = true;
-          break;
-        case "ArrowLeft": {
-          const targetInput = e.target as HTMLInputElement;
-          const isStart = targetInput.selectionStart === 0 || targetInput.selectionStart === null;
-          if (isStart || targetInput.tagName === "SELECT") {
-            nextColIdx = Math.max(0, colIdx - 1);
+          if ((e.target as HTMLElement).tagName !== "SELECT") {
+            nextRowIdx = Math.min(shipments.length - 1, rowIdx + 1);
             shouldPreventDefault = true;
           }
           break;
-        }
-        case "ArrowRight": {
-          const targetInput = e.target as HTMLInputElement;
-          const isEnd =
-            targetInput.selectionEnd === (targetInput.value || "").length || targetInput.selectionEnd === null;
-          if (isEnd || targetInput.tagName === "SELECT") {
-            nextColIdx = Math.min(editableFields.length - 1, colIdx + 1);
-            shouldPreventDefault = true;
-          }
-          break;
-        }
         case "Tab":
           if (e.shiftKey) {
             if (colIdx === 0) {
